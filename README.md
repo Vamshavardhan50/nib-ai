@@ -18,7 +18,7 @@ Smallest binary, fastest CPU training/inference, easy integration for any develo
 | Training loop | ✅ Yes | Mini-batch with shuffling |
 | Pre-trained model weights | ❌ No | None — starts from random weights |
 
-No `.gguf`, no `.bin`, no Hugging Face download. Models begin with random weights and learn from **your real data**.
+No external `.gguf` or pre-trained `.bin`, no Hugging Face download. Models begin with random weights and learn from **your real data**. (`turbo.bin` is this project's own compact output format, produced by `turbo-train`.)
 
 ## Three models
 
