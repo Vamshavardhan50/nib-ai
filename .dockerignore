@@ -1,0 +1,10 @@
+target/
+.git/
+.gitignore
+*.exe
+shakespeare.txt
+tinyshakespeare.txt
+data.txt
+model.json
+vision.json
+README.md

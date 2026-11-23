@@ -1,0 +1,23 @@
+/target/
+*.pdb
+*.idb
+.DS_Store
+Thumbs.db
+.env
+.env.local
+
+# Trained model outputs (regeneratable)
+model.json
+vision.json
+
+# tokenizer.json (2 KB) and turbo.bin (~1 MB) are intentionally tracked so a
+# GitHub/Docker deploy can serve the demo without re-training.
+
+# Downloaded / generated corpora (regeneratable via get-data.ps1)
+tinyshakespeare.txt
+shakespeare.txt
+pride.txt
+mydata.txt
+
+# Local research notes / third-party skill documents
+REA-*.md

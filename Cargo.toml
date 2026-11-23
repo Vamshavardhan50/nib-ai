@@ -1,0 +1,35 @@
+[package]
+name = "cactus-rs"
+version = "0.1.0"
+edition = "2021"
+description = "From-scratch neural network in Rust — 100M-shape TurboLM under 1 MB, web API included"
+license = "Apache-2.0"
+keywords = ["neural-network", "from-scratch", "rust", "language-model", "training"]
+categories = ["development-tools::runtime", "machine-learning"]
+
+[dependencies]
+ndarray = { version = "0.16", features = ["serde"] }
+rand = "0.8"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+clap = { version = "4", features = ["derive"] }
+anyhow = "1"
+image = "0.25"
+
+[[bin]]
+name = "cactus"
+path = "src/main.rs"
+
+[lib]
+name = "cactus_rs"
+path = "src/lib.rs"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
+
+[profile.dev]
+opt-level = 1
