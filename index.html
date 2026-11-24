@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>cactus-rs · TurboLM</title>
+<title>cactus-rs · language model</title>
 <style>
 :root{--bg:#0b0d12;--panel:#12151d;--line:#252a36;--text:#eef1f7;--muted:#929caf;--accent:#7ce38b;--accent2:#6ea8fe;--danger:#ff7b72}
 *{box-sizing:border-box}
@@ -50,15 +50,18 @@ footer{margin-top:26px;color:var(--muted);font-size:12px;text-align:center}
 <body>
 <main>
 <header>
-  <div class="brand"><div class="logo">c</div><div><h1>cactus-rs · TurboLM</h1><p class="sub">100M-shape language model in under 1 MB</p></div></div>
-  <div class="badge">model <b id="sizeBadge">0.995 MB</b></div>
+  <div class="brand"><div class="logo">c</div><div><h1>cactus-rs · language model</h1><p class="sub">From-scratch Rust · 100M-parameter models</p></div></div>
+  <div class="badge">model <b id="sizeBadge">loading…</b></div>
 </header>
 
 <section class="card">
   <label for="endpoint">API endpoint</label>
   <input id="endpoint" type="url" placeholder="https://your-cactus-host" spellcheck="false">
   <div class="grid">
-    <div><label for="prompt">Prompt</label><textarea id="prompt" spellcheck="false">ROMEO: </textarea></div>
+    <div><label for="prompt">Prompt</label><textarea id="prompt" spellcheck="false">First Citizen:
+Before we proceed any further, hear me speak.
+
+</textarea></div>
     <div>
       <label for="length">Characters <span class="val" id="lengthVal">300</span></label>
       <input id="length" type="range" min="50" max="1000" step="50" value="300">
@@ -76,11 +79,11 @@ footer{margin-top:26px;color:var(--muted);font-size:12px;text-align:center}
   <div class="meta" id="meta">…</div>
   <details>
     <summary>Embed this on any website</summary>
-    <pre><code id="embed">&lt;iframe src="https://YOUR-HOST/" width="100%" height="760" style="border:0;border-radius:16px" title="cactus-rs TurboLM"&gt;&lt;/iframe&gt;</code></pre>
+    <pre><code id="embed">&lt;iframe src="https://YOUR-HOST/" width="100%" height="760" style="border:0;border-radius:16px" title="cactus-rs language model"&gt;&lt;/iframe&gt;</code></pre>
     <p>The page works from GitHub Pages, Netlify, Vercel, Cloudflare Pages, or any static host. Set <code>?api=https://your-host</code> or enter the API endpoint above; CORS is enabled on the server.</p>
   </details>
 </section>
-<footer>From-scratch Rust · no pre-trained weights · 100M-shape TurboLM in under 1 MB</footer>
+<footer>From-scratch Rust · no pre-trained weights · CPU inference</footer>
 </main>
 <script>
 (() => {
@@ -88,14 +91,17 @@ footer{margin-top:26px;color:var(--muted);font-size:12px;text-align:center}
   const endpoint = $("endpoint"), prompt = $("prompt"), out = $("out"), dot = $("dot"), status = $("status");
   const go = $("go"), stop = $("stop"), copy = $("copy"), meta = $("meta"), sizeBadge = $("sizeBadge"), embed = $("embed");
   const params = new URLSearchParams(location.search);
-  const staticHost = /(^|\.)(github\.io|netlify\.app|vercel\.app|pages\.dev|web\.app|surge\.sh)$/.test(location.hostname);
+  const staticHost = /(^|\.)(github\.io|gitlab\.io|netlify\.app|vercel\.app|pages\.dev|web\.app|firebaseapp\.com|surge\.sh|onrender\.com|azurestaticapps\.net)$/.test(location.hostname);
   let saved = "";
   try { saved = localStorage.getItem("cactus-api") || ""; } catch (e) {}
   let api = params.get("api") || saved || (location.protocol.startsWith("http") && !staticHost ? location.origin : "");
   let abort = null;
   endpoint.value = api;
-  if (location.protocol.startsWith("http")) {
-    embed.textContent = '<iframe src="' + location.origin + location.pathname + '" width="100%" height="760" style="border:0;border-radius:16px" title="cactus-rs TurboLM"></iframe>';
+
+  function setEmbed() {
+    if (!location.protocol.startsWith("http")) return;
+    const q = base() ? "?api=" + encodeURIComponent(base()) : "";
+    embed.textContent = '<iframe src="' + location.origin + location.pathname + q + '" width="100%" height="760" style="border:0;border-radius:16px" title="cactus-rs language model"></iframe>';
   }
 
   const fmt = (n) => n >= 1e6 ? (n / 1e6).toFixed(2) + "M" : n >= 1e3 ? (n / 1e3).toFixed(1) + "K" : String(n);
@@ -105,6 +111,7 @@ footer{margin-top:26px;color:var(--muted);font-size:12px;text-align:center}
   async function check() {
     api = endpoint.value.trim().replace(/\/+$/, "");
     try { localStorage.setItem("cactus-api", api); } catch (e) {}
+    setEmbed();
     if (!api) { setStatus("enter an API endpoint", "err"); meta.textContent = "Static hosting: point this page at a running cactus serve instance."; return; }
     setStatus("checking API…", "");
     try {
@@ -112,15 +119,15 @@ footer{margin-top:26px;color:var(--muted);font-size:12px;text-align:center}
       if (!r.ok) throw new Error("HTTP " + r.status);
       const d = await r.json();
       setStatus("API online", "ok");
-      sizeBadge.textContent = (d.file_bytes / 1e6).toFixed(3) + " MB";
+      sizeBadge.textContent = d.name + " · " + (d.file_bytes / 1e6).toFixed(3) + " MB";
       meta.innerHTML = "";
       const bits = [
         ["logical params", fmt(d.logical_parameters)],
         ["stored params", fmt(d.stored_parameters)],
         ["context", d.config.context],
-        ["rank", d.config.rank],
-        ["device", "CPU"],
       ];
+      if (d.config.rank) bits.push(["rank", d.config.rank]);
+      bits.push(["device", "CPU"]);
       for (const [k, v] of bits) {
         const s = document.createElement("span");
         s.innerHTML = "<b>" + v + "</b> " + k;
@@ -128,7 +135,7 @@ footer{margin-top:26px;color:var(--muted);font-size:12px;text-align:center}
       }
     } catch (e) {
       setStatus("API offline", "err");
-      meta.textContent = "Start it with: cactus serve --model turbo.bin --tokenizer tokenizer.json";
+      meta.textContent = "Start it with: cactus serve --model turbo.bin (or dense.bin) --tokenizer tokenizer.json";
     }
   }
 

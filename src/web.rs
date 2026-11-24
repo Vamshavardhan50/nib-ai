@@ -11,7 +11,8 @@
 //! also be copied to GitHub Pages, Netlify, Vercel, or Cloudflare Pages and
 //! pointed at a hosted API with `?api=https://your-host`.
 
-use crate::model::Tokenizer;
+use crate::dense;
+use crate::model::{CharLM, Tokenizer};
 use crate::turbo::{self, TurboLM};
 use anyhow::{Context, Result};
 use serde::Deserialize;
@@ -25,11 +26,96 @@ const MAX_BODY_BYTES: usize = 64 * 1024;
 const MAX_HEADER_BYTES: usize = 32 * 1024;
 const MAX_PROMPT_CHARS: usize = 4096;
 
+enum Engine {
+    Turbo(TurboLM),
+    Dense(CharLM),
+}
+
+impl Engine {
+    fn vocab_size(&self) -> usize {
+        match self {
+            Engine::Turbo(model) => model.config.vocab_size,
+            Engine::Dense(model) => model.config.vocab_size,
+        }
+    }
+
+    fn generate(
+        &mut self,
+        tokenizer: &Tokenizer,
+        seed: &str,
+        length: usize,
+        temperature: f32,
+    ) -> String {
+        match self {
+            Engine::Turbo(model) => {
+                turbo::generate_text(model, tokenizer, seed, length, temperature)
+            }
+            Engine::Dense(model) => {
+                dense::generate_text(model, tokenizer, seed, length, temperature)
+            }
+        }
+    }
+
+    fn info(&self) -> Value {
+        match self {
+            Engine::Turbo(model) => json!({
+                "name": "TurboLM",
+                "format": "turbo-int8",
+                "architecture": "low-rank MLP, int8 weights on disk",
+                "logical_parameters": model.logical_params(),
+                "stored_parameters": model.stored_params(),
+                "config": {
+                    "vocab_size": model.config.vocab_size,
+                    "embed_dim": model.config.embed_dim,
+                    "hidden_dim": model.config.hidden_dim,
+                    "context": model.config.context,
+                    "rank": model.config.rank,
+                }
+            }),
+            Engine::Dense(model) => json!({
+                "name": "DenseLM",
+                "format": "dense-int4",
+                "architecture": "dense MLP, 4-bit weights on disk",
+                "logical_parameters": dense::params(&model.config),
+                "stored_parameters": dense::params(&model.config),
+                "config": {
+                    "vocab_size": model.config.vocab_size,
+                    "embed_dim": model.config.embed_dim,
+                    "hidden_dim": model.config.hidden_dim,
+                    "context": model.config.context,
+                }
+            }),
+        }
+    }
+}
+
+fn load_engine(path: &str) -> Result<Engine> {
+    let mut file = std::fs::File::open(path)
+        .with_context(|| format!("open model {path}"))?;
+    let mut magic = [0u8; 8];
+    file.read_exact(&mut magic)
+        .with_context(|| format!("read model header {path}"))?;
+    match &magic {
+        b"CTURBO01" => Ok(Engine::Turbo(
+            TurboLM::load(path).with_context(|| format!("load turbo model {path}"))?,
+        )),
+        b"CDENSE4\0" => Ok(Engine::Dense(
+            dense::load_int4(path).with_context(|| format!("load dense model {path}"))?,
+        )),
+        _ => anyhow::bail!(
+            "{path} is not a cactus model (expected Turbo int8 or dense int4 format)"
+        ),
+    }
+}
+
 struct App {
-    model: Mutex<TurboLM>,
+    model: Mutex<Engine>,
     tokenizer: Tokenizer,
     model_bytes: u64,
 }
+
+const DEFAULT_PROMPT: &str =
+    "First Citizen:\nBefore we proceed any further, hear me speak.\n\n";
 
 #[derive(Debug, Default, Deserialize)]
 struct GenerateRequest {
@@ -48,15 +134,14 @@ pub fn index_html() -> &'static str {
 
 /// Start the HTTP server. Blocks forever (Ctrl+C to stop).
 pub fn serve(model_path: &str, tokenizer_path: &str, host: &str, port: u16) -> Result<()> {
-    let model = TurboLM::load(model_path)
-        .with_context(|| format!("load turbo model {model_path}"))?;
+    let model = load_engine(model_path)?;
     let tokenizer = Tokenizer::load(tokenizer_path)
         .with_context(|| format!("load tokenizer {tokenizer_path}"))?;
-    if tokenizer.vocab_size() != model.config.vocab_size {
+    if tokenizer.vocab_size() != model.vocab_size() {
         anyhow::bail!(
             "tokenizer vocab ({}) does not match model vocab ({})",
             tokenizer.vocab_size(),
-            model.config.vocab_size
+            model.vocab_size()
         );
     }
     let model_bytes = std::fs::metadata(model_path)
@@ -100,7 +185,8 @@ pub fn serve(model_path: &str, tokenizer_path: &str, host: &str, port: u16) -> R
 
 fn handle(mut stream: TcpStream, app: &App) -> Result<()> {
     let _ = stream.set_read_timeout(Some(Duration::from_secs(30)));
-    let _ = stream.set_write_timeout(Some(Duration::from_secs(30)));
+    // Dense 100M generation can take minutes for long outputs.
+    let _ = stream.set_write_timeout(Some(Duration::from_secs(300)));
     let mut reader = BufReader::new(stream.try_clone()?);
 
     let mut request_line = String::new();
@@ -221,7 +307,7 @@ fn generate(stream: &mut TcpStream, app: &App, body: &[u8]) -> Result<()> {
 
     let prompt = request
         .prompt
-        .unwrap_or_else(|| String::from("ROMEO: "));
+        .unwrap_or_else(|| String::from(DEFAULT_PROMPT));
     if prompt.chars().count() > MAX_PROMPT_CHARS {
         respond_json(
             stream,
@@ -236,7 +322,7 @@ fn generate(stream: &mut TcpStream, app: &App, body: &[u8]) -> Result<()> {
     let started = Instant::now();
     let text = {
         let mut model = app.model.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
-        turbo::generate_text(&mut model, &app.tokenizer, &prompt, length, temperature)
+        model.generate(&app.tokenizer, &prompt, length, temperature)
     };
     let elapsed_ms = started.elapsed().as_millis() as u64;
 
@@ -255,36 +341,29 @@ fn generate(stream: &mut TcpStream, app: &App, body: &[u8]) -> Result<()> {
 
 fn model_info(app: &App) -> Value {
     let model = app.model.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
-    let config = &model.config;
-    json!({
-        "name": "TurboLM",
-        "architecture": "low-rank MLP, int8 weights on disk",
-        "logical_parameters": model.logical_params(),
-        "stored_parameters": model.stored_params(),
-        "file_bytes": app.model_bytes,
-        "config": {
-            "vocab_size": config.vocab_size,
-            "embed_dim": config.embed_dim,
-            "hidden_dim": config.hidden_dim,
-            "context": config.context,
-            "rank": config.rank,
-        },
-        "endpoints": {
-            "health": "/health",
-            "info": "/api/info",
-            "generate": "/api/generate",
-            "openapi": "/openapi.json",
-        }
-    })
+    let mut info = model.info();
+    if let Some(object) = info.as_object_mut() {
+        object.insert("file_bytes".to_string(), json!(app.model_bytes));
+        object.insert(
+            "endpoints".to_string(),
+            json!({
+                "health": "/health",
+                "info": "/api/info",
+                "generate": "/api/generate",
+                "openapi": "/openapi.json",
+            }),
+        );
+    }
+    info
 }
 
 fn openapi() -> Value {
     json!({
         "openapi": "3.1.0",
         "info": {
-            "title": "cactus-rs TurboLM API",
+            "title": "cactus-rs language model API",
             "version": env!("CARGO_PKG_VERSION"),
-            "description": "Generate text with a from-scratch compact language model."
+            "description": "Generate text with a from-scratch Turbo or dense language model."
         },
         "paths": {
             "/health": {
@@ -309,7 +388,7 @@ fn openapi() -> Value {
                                 "schema": {
                                     "type": "object",
                                     "properties": {
-                                        "prompt": { "type": "string", "maxLength": MAX_PROMPT_CHARS },
+                                        "prompt": { "type": "string", "maxLength": MAX_PROMPT_CHARS, "default": DEFAULT_PROMPT },
                                         "length": { "type": "integer", "minimum": 1, "maximum": 2000, "default": 300 },
                                         "temperature": { "type": "number", "minimum": 0.01, "maximum": 2.0, "default": 0.8 }
                                     }
@@ -394,7 +473,7 @@ const INDEX_HTML: &str = r##"<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>cactus-rs · TurboLM</title>
+<title>cactus-rs · language model</title>
 <style>
 :root{--bg:#0b0d12;--panel:#12151d;--line:#252a36;--text:#eef1f7;--muted:#929caf;--accent:#7ce38b;--accent2:#6ea8fe;--danger:#ff7b72}
 *{box-sizing:border-box}
@@ -441,15 +520,18 @@ footer{margin-top:26px;color:var(--muted);font-size:12px;text-align:center}
 <body>
 <main>
 <header>
-  <div class="brand"><div class="logo">c</div><div><h1>cactus-rs · TurboLM</h1><p class="sub">100M-shape language model in under 1 MB</p></div></div>
-  <div class="badge">model <b id="sizeBadge">0.995 MB</b></div>
+  <div class="brand"><div class="logo">c</div><div><h1>cactus-rs · language model</h1><p class="sub">From-scratch Rust · 100M-parameter models</p></div></div>
+  <div class="badge">model <b id="sizeBadge">loading…</b></div>
 </header>
 
 <section class="card">
   <label for="endpoint">API endpoint</label>
   <input id="endpoint" type="url" placeholder="https://your-cactus-host" spellcheck="false">
   <div class="grid">
-    <div><label for="prompt">Prompt</label><textarea id="prompt" spellcheck="false">ROMEO: </textarea></div>
+    <div><label for="prompt">Prompt</label><textarea id="prompt" spellcheck="false">First Citizen:
+Before we proceed any further, hear me speak.
+
+</textarea></div>
     <div>
       <label for="length">Characters <span class="val" id="lengthVal">300</span></label>
       <input id="length" type="range" min="50" max="1000" step="50" value="300">
@@ -467,11 +549,11 @@ footer{margin-top:26px;color:var(--muted);font-size:12px;text-align:center}
   <div class="meta" id="meta">…</div>
   <details>
     <summary>Embed this on any website</summary>
-    <pre><code id="embed">&lt;iframe src="https://YOUR-HOST/" width="100%" height="760" style="border:0;border-radius:16px" title="cactus-rs TurboLM"&gt;&lt;/iframe&gt;</code></pre>
+    <pre><code id="embed">&lt;iframe src="https://YOUR-HOST/" width="100%" height="760" style="border:0;border-radius:16px" title="cactus-rs language model"&gt;&lt;/iframe&gt;</code></pre>
     <p>The page works from GitHub Pages, Netlify, Vercel, Cloudflare Pages, or any static host. Set <code>?api=https://your-host</code> or enter the API endpoint above; CORS is enabled on the server.</p>
   </details>
 </section>
-<footer>From-scratch Rust · no pre-trained weights · 100M-shape TurboLM in under 1 MB</footer>
+<footer>From-scratch Rust · no pre-trained weights · CPU inference</footer>
 </main>
 <script>
 (() => {
@@ -479,14 +561,17 @@ footer{margin-top:26px;color:var(--muted);font-size:12px;text-align:center}
   const endpoint = $("endpoint"), prompt = $("prompt"), out = $("out"), dot = $("dot"), status = $("status");
   const go = $("go"), stop = $("stop"), copy = $("copy"), meta = $("meta"), sizeBadge = $("sizeBadge"), embed = $("embed");
   const params = new URLSearchParams(location.search);
-  const staticHost = /(^|\.)(github\.io|netlify\.app|vercel\.app|pages\.dev|web\.app|surge\.sh)$/.test(location.hostname);
+  const staticHost = /(^|\.)(github\.io|gitlab\.io|netlify\.app|vercel\.app|pages\.dev|web\.app|firebaseapp\.com|surge\.sh|onrender\.com|azurestaticapps\.net)$/.test(location.hostname);
   let saved = "";
   try { saved = localStorage.getItem("cactus-api") || ""; } catch (e) {}
   let api = params.get("api") || saved || (location.protocol.startsWith("http") && !staticHost ? location.origin : "");
   let abort = null;
   endpoint.value = api;
-  if (location.protocol.startsWith("http")) {
-    embed.textContent = '<iframe src="' + location.origin + location.pathname + '" width="100%" height="760" style="border:0;border-radius:16px" title="cactus-rs TurboLM"></iframe>';
+
+  function setEmbed() {
+    if (!location.protocol.startsWith("http")) return;
+    const q = base() ? "?api=" + encodeURIComponent(base()) : "";
+    embed.textContent = '<iframe src="' + location.origin + location.pathname + q + '" width="100%" height="760" style="border:0;border-radius:16px" title="cactus-rs language model"></iframe>';
   }
 
   const fmt = (n) => n >= 1e6 ? (n / 1e6).toFixed(2) + "M" : n >= 1e3 ? (n / 1e3).toFixed(1) + "K" : String(n);
@@ -496,6 +581,7 @@ footer{margin-top:26px;color:var(--muted);font-size:12px;text-align:center}
   async function check() {
     api = endpoint.value.trim().replace(/\/+$/, "");
     try { localStorage.setItem("cactus-api", api); } catch (e) {}
+    setEmbed();
     if (!api) { setStatus("enter an API endpoint", "err"); meta.textContent = "Static hosting: point this page at a running cactus serve instance."; return; }
     setStatus("checking API…", "");
     try {
@@ -503,15 +589,15 @@ footer{margin-top:26px;color:var(--muted);font-size:12px;text-align:center}
       if (!r.ok) throw new Error("HTTP " + r.status);
       const d = await r.json();
       setStatus("API online", "ok");
-      sizeBadge.textContent = (d.file_bytes / 1e6).toFixed(3) + " MB";
+      sizeBadge.textContent = d.name + " · " + (d.file_bytes / 1e6).toFixed(3) + " MB";
       meta.innerHTML = "";
       const bits = [
         ["logical params", fmt(d.logical_parameters)],
         ["stored params", fmt(d.stored_parameters)],
         ["context", d.config.context],
-        ["rank", d.config.rank],
-        ["device", "CPU"],
       ];
+      if (d.config.rank) bits.push(["rank", d.config.rank]);
+      bits.push(["device", "CPU"]);
       for (const [k, v] of bits) {
         const s = document.createElement("span");
         s.innerHTML = "<b>" + v + "</b> " + k;
@@ -519,7 +605,7 @@ footer{margin-top:26px;color:var(--muted);font-size:12px;text-align:center}
       }
     } catch (e) {
       setStatus("API offline", "err");
-      meta.textContent = "Start it with: cactus serve --model turbo.bin --tokenizer tokenizer.json";
+      meta.textContent = "Start it with: cactus serve --model turbo.bin (or dense.bin) --tokenizer tokenizer.json";
     }
   }
 
@@ -611,6 +697,32 @@ mod tests {
     }
 
     #[test]
+    fn detects_dense_model_by_magic() {
+        use crate::{Init, ModelConfig};
+
+        let model = CharLM::new(ModelConfig {
+            vocab_size: 8,
+            embed_dim: 4,
+            hidden_dim: 16,
+            context: 3,
+            init: Init::Xavier,
+        });
+        let path = std::env::temp_dir().join(format!(
+            "cactus-web-dense-test-{}.bin",
+            std::process::id()
+        ));
+        let path_str = path.to_string_lossy().to_string();
+        dense::save_int4(&model, &path_str).unwrap();
+        let engine = load_engine(&path_str).unwrap();
+        let _ = std::fs::remove_file(&path);
+
+        match engine {
+            Engine::Dense(loaded) => assert_eq!(loaded.config.hidden_dim, 16),
+            Engine::Turbo(_) => panic!("dense model was detected as Turbo"),
+        }
+    }
+
+    #[test]
     fn http_generate_roundtrip() {
         use crate::TurboConfig;
         use std::io::{Read, Write};
@@ -624,7 +736,7 @@ mod tests {
             rank: 2,
         };
         let app = Arc::new(App {
-            model: Mutex::new(TurboLM::new(config)),
+            model: Mutex::new(Engine::Turbo(TurboLM::new(config))),
             tokenizer,
             model_bytes: 123,
         });

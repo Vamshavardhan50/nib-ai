@@ -4,7 +4,8 @@
 //!   train           Train a char-level language model on a text file
 //!   generate        Generate text from a trained model
 //!   turbo-*         Compact 100M-shape model commands
-//!   serve           Serve Turbo over HTTP with a browser UI + JSON API
+//!   dense-*         True 100M-weight dense model, 4-bit (~50 MB)
+//!   serve           Serve a Turbo or dense model over HTTP with a browser UI
 //!   vision-train    Train a from-scratch CNN on labeled images
 //!   vision-predict  Classify an image with a trained CNN
 //!   version         Print version
@@ -13,7 +14,7 @@ use anyhow::{Context, Result};
 use clap::Parser;
 use rand::Rng;
 
-use cactus_rs::{CharLM, ModelConfig, Tokenizer, Trainer, TurboConfig, TurboLM, TurboTrainer, VisionCNN, VisionTrainer};
+use cactus_rs::{CharLM, DenseTrainer, Init, ModelConfig, Tokenizer, Trainer, TurboConfig, TurboLM, TurboTrainer, VisionCNN, VisionTrainer};
 
 #[derive(Parser, Debug)]
 #[command(author, version, about = "cactus-rs: from-scratch neural network for developers", long_about = None)]
@@ -153,7 +154,83 @@ enum Commands {
         #[arg(long, default_value_t = 0.7)]
         temperature: f32,
     },
-    /// Serve the Turbo model over HTTP with a browser UI and JSON API.
+    /// Print dense 100M parameter counts and 4-bit file size.
+    #[command(name = "dense-info")]
+    DenseInfo {
+        #[arg(long, default_value_t = 100_000_000)]
+        target: usize,
+        #[arg(long, default_value_t = 62)]
+        vocab: usize,
+        #[arg(long, default_value_t = 64)]
+        context: usize,
+        #[arg(long, default_value_t = 128)]
+        embed: usize,
+        /// 0 = derive hidden size from --target.
+        #[arg(long, default_value_t = 0)]
+        hidden: usize,
+        /// Read vocab size from a tokenizer.json instead of --vocab.
+        #[arg(long)]
+        tokenizer: Option<String>,
+    },
+    /// Materialize a trained Turbo model into a true dense 4-bit file.
+    #[command(name = "dense-build")]
+    DenseBuild {
+        #[arg(long, default_value = "turbo.bin")]
+        turbo: String,
+        #[arg(long, short = 'o', default_value = "dense.bin")]
+        output: String,
+        #[arg(long, default_value = "tokenizer.json")]
+        tokenizer: String,
+    },
+    /// Train a dense 100M model directly (or fine-tune from --init-turbo).
+    #[command(name = "dense-train")]
+    DenseTrain {
+        #[arg(long, short = 'i', default_value = "shakespeare.txt")]
+        input: String,
+        #[arg(long, short = 'o', default_value = "dense.bin")]
+        output: String,
+        #[arg(long, default_value = "tokenizer.json")]
+        tokenizer: String,
+        /// Optional trained Turbo model to expand and fine-tune.
+        #[arg(long)]
+        init_turbo: Option<String>,
+        /// Used only when training from random weights; ignored with --init-turbo.
+        #[arg(long, default_value_t = 100_000_000)]
+        target: usize,
+        /// Used only when training from random weights; ignored with --init-turbo.
+        #[arg(long, default_value_t = 64)]
+        context: usize,
+        /// Used only when training from random weights; ignored with --init-turbo.
+        #[arg(long, default_value_t = 128)]
+        embed: usize,
+        /// Used only when training from random weights; ignored with --init-turbo.
+        #[arg(long, default_value_t = 0)]
+        hidden: usize,
+        #[arg(long, default_value_t = 0.02)]
+        lr: f32,
+        #[arg(long, short = 'e', default_value_t = 1)]
+        epochs: usize,
+        #[arg(long, default_value_t = 128)]
+        batch_size: usize,
+        /// 0 = every window in the file. Dense training is much slower.
+        #[arg(long, default_value_t = 20_000)]
+        max_samples: usize,
+    },
+    /// Generate text from a dense 4-bit model.
+    #[command(name = "dense-generate")]
+    DenseGenerate {
+        #[arg(long, short = 'm', default_value = "dense.bin")]
+        model: String,
+        #[arg(long, default_value = "tokenizer.json")]
+        tokenizer: String,
+        #[arg(long, short = 's', default_value = "ROMEO: ")]
+        seed: String,
+        #[arg(long, default_value_t = 300)]
+        length: usize,
+        #[arg(long, default_value_t = 0.7)]
+        temperature: f32,
+    },
+    /// Serve a Turbo or dense model over HTTP with a browser UI and JSON API.
     Serve {
         #[arg(long, short = 'm', default_value = "turbo.bin")]
         model: String,
@@ -251,6 +328,53 @@ fn main() -> Result<()> {
             length,
             temperature,
         } => turbo_generate(&model, &tokenizer, &seed, length, temperature),
+        Commands::DenseInfo {
+            target,
+            vocab,
+            context,
+            embed,
+            hidden,
+            tokenizer,
+        } => dense_info(target, vocab, context, embed, hidden, tokenizer.as_deref()),
+        Commands::DenseBuild {
+            turbo,
+            output,
+            tokenizer,
+        } => dense_build(&turbo, &output, &tokenizer),
+        Commands::DenseTrain {
+            input,
+            output,
+            tokenizer,
+            init_turbo,
+            target,
+            context,
+            embed,
+            hidden,
+            lr,
+            epochs,
+            batch_size,
+            max_samples,
+        } => dense_train(
+            &input,
+            &output,
+            &tokenizer,
+            init_turbo.as_deref(),
+            target,
+            context,
+            embed,
+            hidden,
+            lr,
+            epochs,
+            batch_size,
+            max_samples,
+        ),
+        Commands::DenseGenerate {
+            model,
+            tokenizer,
+            seed,
+            length,
+            temperature,
+        } => dense_generate(&model, &tokenizer, &seed, length, temperature),
         Commands::Serve {
             model,
             tokenizer,
@@ -582,6 +706,282 @@ fn turbo_generate(
 
     let generated = cactus_rs::turbo::generate_text(&mut model, &tok, seed, length, temperature);
 
+    print!("{generated}");
+    use std::io::Write;
+    let _ = std::io::stdout().flush();
+    Ok(())
+}
+
+fn dense_config(
+    target: usize,
+    vocab: usize,
+    context: usize,
+    embed: usize,
+    hidden: usize,
+) -> Result<ModelConfig> {
+    if vocab == 0 || context == 0 || embed == 0 {
+        anyhow::bail!("vocab, context, and embed must all be at least 1");
+    }
+    let hidden = if hidden > 0 {
+        hidden
+    } else {
+        let denom = context * embed + vocab;
+        target.saturating_sub(vocab * embed) / denom.max(1)
+    };
+    if hidden < 2 {
+        anyhow::bail!(
+            "hidden size is too small ({hidden}); raise --target or pass --hidden"
+        );
+    }
+    Ok(ModelConfig {
+        vocab_size: vocab,
+        embed_dim: embed,
+        hidden_dim: hidden,
+        context,
+        init: Init::Xavier,
+    })
+}
+
+fn dense_info(
+    target: usize,
+    vocab: usize,
+    context: usize,
+    embed: usize,
+    hidden: usize,
+    tokenizer_path: Option<&str>,
+) -> Result<()> {
+    let vocab = match tokenizer_path {
+        Some(path) => Tokenizer::load(path)
+            .with_context(|| format!("load tokenizer {path}"))?
+            .vocab_size(),
+        None => vocab,
+    };
+    let config = dense_config(target, vocab, context, embed, hidden)?;
+    let params = cactus_rs::dense::params(&config);
+    let bytes = cactus_rs::dense::quantized_bytes(&config);
+    println!("Dense 100M language model (4-bit)");
+    println!(
+        "shape: vocab={} context={} embed={} hidden={}",
+        config.vocab_size, config.context, config.embed_dim, config.hidden_dim
+    );
+    println!(
+        "dense parameters:          {} ({:.2}M)",
+        params,
+        params as f64 / 1_000_000.0
+    );
+    println!(
+        "4-bit file estimate:       {} bytes ({:.2} MB)",
+        bytes,
+        bytes as f64 / 1_000_000.0
+    );
+    println!(
+        "dense f32 equivalent:      {:.1} MB",
+        params as f64 * 4.0 / 1_000_000.0
+    );
+    if bytes > 100_000_000 {
+        println!("warning: estimated file is over 100 MB — lower --target.");
+    }
+    Ok(())
+}
+
+fn dense_build(turbo_path: &str, output: &str, tokenizer_path: &str) -> Result<()> {
+    let turbo = TurboLM::load(turbo_path)
+        .with_context(|| format!("load turbo model {turbo_path}"))?;
+    let tok = Tokenizer::load(tokenizer_path)
+        .with_context(|| format!("load tokenizer {tokenizer_path}"))?;
+    if tok.vocab_size() != turbo.config.vocab_size {
+        anyhow::bail!(
+            "tokenizer vocab ({}) does not match model vocab ({})",
+            tok.vocab_size(),
+            turbo.config.vocab_size
+        );
+    }
+
+    println!(
+        "materializing dense model from rank-{} factors...",
+        turbo.config.rank
+    );
+    let dense = cactus_rs::dense::from_turbo(&turbo);
+    let params = cactus_rs::dense::params(&dense.config);
+    let expected = cactus_rs::dense::quantized_bytes(&dense.config);
+    cactus_rs::dense::save_int4(&dense, output)?;
+    let bytes = std::fs::metadata(output)?.len();
+    println!(
+        "dense model saved to {output} ({} bytes, {:.2} MB)",
+        bytes,
+        bytes as f64 / 1_000_000.0
+    );
+    println!(
+        "dense parameters: {} ({:.2}M), estimated 4-bit file: {} bytes",
+        params,
+        params as f64 / 1_000_000.0,
+        expected
+    );
+    if bytes > 100_000_000 {
+        anyhow::bail!("dense file is over 100 MB");
+    }
+    Ok(())
+}
+
+#[allow(clippy::too_many_arguments)]
+fn dense_train(
+    input: &str,
+    output: &str,
+    tokenizer_path: &str,
+    init_turbo: Option<&str>,
+    target: usize,
+    context: usize,
+    embed: usize,
+    hidden: usize,
+    lr: f32,
+    epochs: usize,
+    batch_size: usize,
+    max_samples: usize,
+) -> Result<()> {
+    if batch_size == 0 {
+        anyhow::bail!("batch-size must be at least 1");
+    }
+    let text = std::fs::read_to_string(input)
+        .with_context(|| format!("read input file {input}"))?;
+    if text.is_empty() {
+        anyhow::bail!("input file {input} is empty");
+    }
+
+    let (tok, model) = if let Some(turbo_path) = init_turbo {
+        let turbo = TurboLM::load(turbo_path)
+            .with_context(|| format!("load turbo model {turbo_path}"))?;
+        let tok = Tokenizer::load(tokenizer_path)
+            .with_context(|| format!("load tokenizer {tokenizer_path}"))?;
+        if tok.vocab_size() != turbo.config.vocab_size {
+            anyhow::bail!(
+                "tokenizer vocab ({}) does not match model vocab ({})",
+                tok.vocab_size(),
+                turbo.config.vocab_size
+            );
+        }
+        println!(
+            "initializing dense model from {turbo_path} (rank {})",
+            turbo.config.rank
+        );
+        (tok, cactus_rs::dense::from_turbo(&turbo))
+    } else {
+        let tok = Tokenizer::from_text(&text);
+        tok.save(tokenizer_path)?;
+        let config = dense_config(target, tok.vocab_size(), context, embed, hidden)?;
+        (tok, CharLM::new(config))
+    };
+    let config = model.config.clone();
+    let params = cactus_rs::dense::params(&config);
+    let estimated = cactus_rs::dense::quantized_bytes(&config);
+    println!(
+        "dense training: vocab={} context={} embed={} hidden={} params={} ({:.2}M)",
+        config.vocab_size,
+        config.context,
+        config.embed_dim,
+        config.hidden_dim,
+        params,
+        params as f64 / 1_000_000.0
+    );
+    println!(
+        "estimated 4-bit file: {} bytes ({:.2} MB)",
+        estimated,
+        estimated as f64 / 1_000_000.0
+    );
+    if estimated > 100_000_000 {
+        println!("warning: estimated file is over 100 MB — lower --target.");
+    }
+
+    let ids = tok.encode(&text);
+    if ids.len() <= config.context {
+        anyhow::bail!("input text too short for context size {}", config.context);
+    }
+    let n = ids.len() - config.context;
+    let take = if max_samples == 0 { n } else { n.min(max_samples) };
+    if take == 0 {
+        anyhow::bail!("no training windows available");
+    }
+    println!(
+        "training windows per epoch: {take} of {n} (batch={batch_size}, lr={lr})"
+    );
+
+    let mut trainer = DenseTrainer::new(model, lr);
+    for epoch in 0..epochs {
+        let mut order: Vec<usize> = (0..n).collect();
+        let mut rng = rand::thread_rng();
+        for i in (1..order.len()).rev() {
+            let j = rng.gen_range(0..=i);
+            order.swap(i, j);
+        }
+
+        let mut epoch_loss = 0.0;
+        let mut num_batches = 0usize;
+        let total_batches = take.div_ceil(batch_size);
+        let log_every = (total_batches / 10).max(1);
+        for chunk in order[..take].chunks(batch_size) {
+            let batch: Vec<(Vec<usize>, usize)> = chunk
+                .iter()
+                .map(|&i| {
+                    (
+                        ids[i..i + config.context].to_vec(),
+                        ids[i + config.context],
+                    )
+                })
+                .collect();
+            epoch_loss += trainer.train_step(&batch);
+            num_batches += 1;
+            if num_batches % log_every == 0 || num_batches == total_batches {
+                println!(
+                    "epoch {epoch}/{epochs} batch {num_batches}/{total_batches} loss: {:.4}",
+                    epoch_loss / num_batches as f32
+                );
+            }
+        }
+        println!(
+            "epoch {epoch}/{epochs} loss: {:.4}",
+            epoch_loss / num_batches.max(1) as f32
+        );
+    }
+
+    trainer.save(output)?;
+    let bytes = std::fs::metadata(output)?.len();
+    println!(
+        "dense model saved to {output} ({} bytes, {:.2} MB)",
+        bytes,
+        bytes as f64 / 1_000_000.0
+    );
+    if bytes > 100_000_000 {
+        anyhow::bail!("dense file is over 100 MB");
+    }
+    let params = cactus_rs::dense::params(&trainer.model.config);
+    println!(
+        "dense parameters: {} ({:.2}M)",
+        params,
+        params as f64 / 1_000_000.0
+    );
+    Ok(())
+}
+
+fn dense_generate(
+    model_path: &str,
+    tokenizer_path: &str,
+    seed: &str,
+    length: usize,
+    temperature: f32,
+) -> Result<()> {
+    let mut model = cactus_rs::dense::load_int4(model_path)
+        .with_context(|| format!("load dense model {model_path}"))?;
+    let tok = Tokenizer::load(tokenizer_path)
+        .with_context(|| format!("load tokenizer {tokenizer_path}"))?;
+    if tok.vocab_size() != model.config.vocab_size {
+        anyhow::bail!(
+            "tokenizer vocab ({}) does not match model vocab ({})",
+            tok.vocab_size(),
+            model.config.vocab_size
+        );
+    }
+
+    let generated =
+        cactus_rs::dense::generate_text(&mut model, &tok, seed, length, temperature);
     print!("{generated}");
     use std::io::Write;
     let _ = std::io::stdout().flush();

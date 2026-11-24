@@ -7,6 +7,7 @@
 //! Includes:
 //! - `model`  — character-level language model (text)
 //! - `turbo`  — compact 100M-shape low-rank language model (<1 MB on disk)
+//! - `dense`  — true 100M-weight dense model, 4-bit (~50 MB on disk)
 //! - `web`    — zero-dependency HTTP API + browser UI
 //! - `vision` — convolutional neural network (images)
 //!
@@ -38,6 +39,7 @@
 //! # Ok(()) }
 //! ```
 
+pub mod dense;
 pub mod layers;
 pub mod model;
 pub mod optimizer;
@@ -46,6 +48,7 @@ pub mod turbo;
 pub mod vision;
 pub mod web;
 
+pub use dense::{DenseTrainer, save_int4};
 pub use layers::{Embedding, Init, Linear};
 pub use model::{CharLM, ModelConfig, Tokenizer, Trainer};
 pub use optimizer::{Adam, SGD};

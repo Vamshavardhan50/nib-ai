@@ -9,9 +9,11 @@ Thumbs.db
 # Trained model outputs (regeneratable)
 model.json
 vision.json
+dense-bench.bin
 
-# tokenizer.json (2 KB) and turbo.bin (~1 MB) are intentionally tracked so a
-# GitHub/Docker deploy can serve the demo without re-training.
+# tokenizer.json (2 KB), turbo.bin (~1 MB), and dense.bin (~50 MB) are
+# intentionally tracked so a GitHub/Docker deploy can serve the trained
+# models without re-training. dense.bin is 4-bit and under 100 MB.
 
 # Downloaded / generated corpora (regeneratable via get-data.ps1)
 tinyshakespeare.txt

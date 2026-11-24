@@ -2,7 +2,7 @@
 
 A **from-scratch neural network in Rust**. It trains its own models — **no pre-trained weights, no GGUF, no external model files, no mock data**. You feed it real text or real images, it learns real patterns.
 
-Smallest binary, fastest CPU training/inference, easy integration for any developer. Includes **TurboLM**: a 100M-shape language model in a **994,656-byte** file, plus a zero-dependency HTTP API and embeddable web UI.
+Smallest binary, fastest CPU training/inference, easy integration for any developer. Includes **TurboLM**: a 100M-shape language model in a **994,656-byte** file, and **DenseLM**: a true **100,009,068-weight** model stored in **50,128,686 bytes (50.13 MB)** at 4 bits — plus a zero-dependency HTTP API and embeddable web UI.
 
 ## What "from scratch" means here
 
@@ -20,13 +20,14 @@ Smallest binary, fastest CPU training/inference, easy integration for any develo
 
 No external `.gguf` or pre-trained `.bin`, no Hugging Face download. Models begin with random weights and learn from **your real data**. (`turbo.bin` is this project's own compact output format, produced by `turbo-train`.)
 
-## Three models
+## Four models
 
 | Model | Task | Data you provide | Command |
 |-------|------|------------------|---------|
 | **CharLM** | Text generation | Any real `.txt` file | `train` / `generate` |
 | **VisionCNN** | Image classification | Labeled images + manifest | `vision-train` / `vision-predict` |
 | **TurboLM** | Text generation, <1 MB | Any real `.txt` file | `turbo-train` / `turbo-generate` / `serve` |
+| **DenseLM** | Text generation, true 100M weights, ~50 MB | Any real `.txt` file | `dense-train` / `dense-generate` / `serve` |
 
 ## Quick start (developer)
 
@@ -55,7 +56,7 @@ cd "D:\Smallest language Model"
 cargo build --release
 ```
 
-**Verified:** release binary = **2.91 MB (2.77 MiB)**, 19 unit tests + 1 doc test pass, CharLM loss 2.35 → 1.46 (40 epochs), Turbo loss 2.32 → 1.78 (5 epochs), Turbo = **100.01M logical / 994,656-byte file**, HTTP generate roundtrip + CORS verified, vision loss drops → 0.02, red/blue classification 98%+ confidence.
+**Verified:** release binary = **3,025,408 bytes (3.03 MB / 2.88 MiB)**, 25 unit tests + 1 doc test pass, CharLM loss 2.35 → 1.46 (40 epochs), Turbo loss 2.32 → 1.78 (5 epochs), Turbo = **100.01M logical / 994,656-byte file**, DenseLM = **100,009,068 weights / 50,128,686-byte file**, dense loss **1.5755 → 1.5290** (2 epochs), HTTP generate roundtrip + CORS verified, vision loss drops → 0.02, red/blue classification 98%+ confidence.
 
 ---
 
@@ -123,7 +124,7 @@ h    = ReLU(flat · U1 · V1 + b1)            # 12114 values
 logits = h · U2 · V2 + b2                   # 62 values
 ```
 
-The file is ~0.99 MB. The number of **independent** weights is ~1M (the stored factors); the 100M figure is the dense-equivalent shape. This is the same idea as LoRA-style low-rank factorization, not a free lunch. Implementation: `src/turbo.rs` (`LowRankLinear`, `TurboLM`, `TurboTrainer`).
+The file is ~0.99 MB. The number of **independent** weights is ~1M (the stored factors); the 100M figure is the dense-equivalent shape. This is the same idea as LoRA-style low-rank factorization, not a free lunch. Implementation: `src/turbo.rs` (`LowRankLinear`, `TurboLM`, `TurboTrainer`). If you need every one of the 100M weights stored, use the **DenseLM** section below: 4-bit weights in ~50 MB.
 
 | `--rank` | stored params | file size |
 |---------:|--------------:|----------:|
@@ -194,6 +195,77 @@ let batch = vec![(vec![0usize; 64], 1usize)];
 trainer.train_step(&batch);
 trainer.save("turbo.bin")?;
 ```
+
+---
+
+## Dense 100M model — 100M real weights, 4-bit, ~50 MB
+
+Turbo stores a 100M **shape** in ~1 MB of factors. This variant stores **all 100M weights**:
+
+```text
+embedding:      62 × 128              =      7,936
+fc1:         8,192 × 12,114           = 99,237,888
+fc2:        12,114 × 62               =    751,068
+biases:      12,114 + 62              =     12,176
+total independent weights             = 100,009,068
+```
+
+At **4 bits per weight**, the file is about **50 MB** — well under the 100 MB target. It uses one scale per row, so it stays more accurate than a single global scale.
+
+| Variant | Independent weights | File | Use case |
+|---------|--------------------:|-----:|----------|
+| **TurboLM** | ~995K | 994,656 bytes | fastest CPU / tiny deploy |
+| **DenseLM** | **100,009,068** | **50,128,686 bytes (50.13 MB)** | true 100M-weight model |
+
+### Inspect the size
+
+```powershell
+.\target\release\cactus dense-info --target 100000000
+```
+
+### Materialize a dense model
+
+This expands a trained Turbo model's factors into the full `U · V` matrices and writes 4-bit weights:
+
+```powershell
+.\target\release\cactus dense-build --turbo turbo.bin --output dense.bin --tokenizer tokenizer.json
+```
+
+### Fine-tune the 100M dense model
+
+The practical training path is: train the compact model first, expand it, then run **dense backprop** so every one of the 100M weights is updated:
+
+```powershell
+.\target\release\cactus dense-train --input shakespeare.txt --output dense.bin --tokenizer tokenizer.json --init-turbo turbo.bin --epochs 2 --max-samples 20000 --batch-size 128 --lr 0.02
+```
+
+**Verified run:** 2 epochs × 20,000 windows, batch 128, lr 0.02, SGD: loss **1.5755 → 1.5290**. The final 4-bit artifact is exactly **50,128,686 bytes**. On this CPU, batch 128 trains at ~0.035 s/sample (~12 minutes/epoch); batch 32 is about 3× slower.
+
+You can also train from random weights, but this is much slower on CPU:
+
+```powershell
+.\target\release\cactus dense-train --input shakespeare.txt --output dense.bin --tokenizer tokenizer.json --target 100000000 --epochs 1 --max-samples 2000 --batch-size 128 --lr 0.01
+```
+
+### Generate
+
+```powershell
+.\target\release\cactus dense-generate --model dense.bin --tokenizer tokenizer.json --seed "ROMEO: " --length 300 --temperature 0.7
+```
+
+### Serve
+
+`serve` auto-detects the model format, so the same API/UI works for both models:
+
+```powershell
+.\target\release\cactus serve --model dense.bin --tokenizer tokenizer.json --port 8080
+```
+
+Dense inference is heavier than Turbo: 100M multiply-adds per generated character versus ~1M stored factors. On the development CPU, 40 characters took **7.2 s** through the HTTP API (~180 ms/char), and dense fine-tuning ran at ~**0.035 s/sample** at batch 128. Dense inference needs roughly **400 MB RAM** for the f32 weights; training needs more. For the fastest web demo use `turbo.bin`; use `dense.bin` when you need the real 100M-weight artifact.
+
+> **Prompt length:** both models use a fixed 64-character context. Prompts shorter than that are repeated to fill the context instead of being padded with spaces. Prompts of 64+ characters give the most natural results; the web UI ships with a natural Shakespeare line as its default prompt.
+
+> **100B parameters under 100 MB is still impossible.** 100B at 1 bit needs ~12.5 GB, at 4 bits ~50 GB, and at int8 ~100 GB. 100M under 100 MB is the target this model meets.
 
 ---
 
@@ -277,7 +349,7 @@ Embed the whole demo on any site:
   src="https://your-cactus-host/"
   width="100%" height="760"
   style="border:0;border-radius:16px"
-  title="cactus-rs TurboLM"></iframe>
+  title="cactus-rs language model"></iframe>
 ```
 
 ### Host the UI on GitHub Pages + the model anywhere
@@ -288,10 +360,10 @@ GitHub Pages serves static files only — it cannot execute Rust. Use the recomm
 # 1. Export the same UI that `serve` uses into a static index.html
 .\target\release\cactus web-export --output index.html
 
-# 2. Commit the UI and the ~1 MB model
+# 2. Commit the UI and the tracked tokenizer + models (turbo.bin, dense.bin)
 git init
 git add .
-git commit -m "cactus-rs: from-scratch TurboLM with web API"
+git commit -m "cactus-rs: from-scratch language models with web API"
 ```
 
 Create a repository on GitHub, then:
@@ -318,22 +390,29 @@ The endpoint is also editable in the page and saved to `localStorage`, so the sa
 
 ### Docker (works on Render, Railway, Fly.io, Hugging Face Spaces, any VPS)
 
-The included `Dockerfile` builds a small Debian image with the `cactus` binary, `turbo.bin`, and `tokenizer.json`:
+The included `Dockerfile` builds a small Debian image with the `cactus` binary, a model, and `tokenizer.json`. Pick the model with the `MODEL` build arg:
 
 ```bash
+# Turbo: ~1 MB model, tiny memory, fastest CPU generation
 docker build -t cactus-turbo .
 docker run --rm -p 8080:8080 cactus-turbo
+
+# Dense: true 100M weights, ~50 MB model, needs roughly 0.5 GB RAM
+docker build --build-arg MODEL=dense.bin -t cactus-dense .
+docker run --rm -p 8080:8080 cactus-dense
 ```
+
+`dense.bin` is the trained 50.13 MB artifact and is committed alongside `turbo.bin`, so both images build from a fresh clone. If you would rather keep large files out of git, upload `dense.bin` as a release asset and adjust the `COPY` line.
 
 | Platform | What to do |
 |----------|------------|
 | **Render** | New → Web Service → this repo → Runtime **Docker** → health check `/health` |
 | **Railway** | New Project → Deploy from GitHub; the Dockerfile is detected automatically |
-| **Fly.io** | `fly launch --now`; internal port `8080` |
+| **Fly.io** | `fly launch --now`; internal port `8080`; use a 1 GB+ VM for the dense model |
 | **Hugging Face Spaces** | New Space → SDK **Docker**; set variable `PORT=7860` |
-| **Any VPS** | Copy `cactus`, `turbo.bin`, `tokenizer.json`; run `./cactus serve --host 0.0.0.0 --port 8080`; put Caddy/nginx in front |
+| **Any VPS** | Copy `cactus`, the model, `tokenizer.json`; run `./cactus serve --host 0.0.0.0 --port 8080`; put Caddy/nginx in front |
 
-The model is only ~1 MB, so deploys and cold starts are fast. If you prefer not to commit model weights, upload `turbo.bin` as a GitHub Release asset or mount it into the container and adjust the `COPY` line.
+The Turbo model is only ~1 MB and needs a few MB of RAM. The dense model is ~50 MB on disk and ~400 MB of f32 weights in memory. If you prefer not to commit model weights, upload them as GitHub Release assets or mount them into the container and adjust the `COPY` line.
 
 > **Public deployment:** the demo API has no authentication (so it can be embedded anywhere). Put it behind a reverse proxy with auth/rate limiting if you need a private endpoint. Request bodies are capped at 64 KB, prompts at 4,096 characters, and generation at 2,000 characters.
 
@@ -416,7 +495,21 @@ cactus turbo-train    --input <file> --output <turbo.bin> --tokenizer <tok.json>
 cactus turbo-generate --model <turbo.bin> --tokenizer <tok.json>
                       [--seed "ROMEO: "] [--length 500] [--temperature 0.7]
 
-cactus serve          --model <turbo.bin> --tokenizer <tok.json>
+cactus dense-info     [--target 100000000] [--context 64] [--embed 128]
+                      [--hidden 0] [--vocab 62] [--tokenizer <tok.json>]
+
+cactus dense-build    --turbo <turbo.bin> --output <dense.bin>
+                      [--tokenizer <tok.json>]
+
+cactus dense-train    --input <file> --output <dense.bin> --tokenizer <tok.json>
+                      [--init-turbo <turbo.bin>] [--target 100000000]
+                      [--context 64] [--embed 128] [--hidden 0] [--lr 0.02]
+                      [--epochs 1] [--batch-size 128] [--max-samples 20000]
+
+cactus dense-generate --model <dense.bin> --tokenizer <tok.json>
+                      [--seed "ROMEO: "] [--length 300] [--temperature 0.7]
+
+cactus serve          --model <turbo.bin|dense.bin> --tokenizer <tok.json>
                       [--host 0.0.0.0] [--port 8080]
 
 cactus web-export     [--output index.html]
@@ -459,6 +552,22 @@ fn main() -> anyhow::Result<()> {
     Ok(())
 }
 ```
+
+### Dense 100M model
+
+```rust
+use cactus_rs::{dense, Tokenizer};
+
+fn main() -> anyhow::Result<()> {
+    let mut model = dense::load_int4("dense.bin")?;
+    let tok = Tokenizer::load("tokenizer.json")?;
+    let text = dense::generate_text(&mut model, &tok, "ROMEO: ", 120, 0.7);
+    println!("{text}");
+    Ok(())
+}
+```
+
+To train instead of load, wrap `model` in `dense::DenseTrainer::new(model, 0.02)` and call `train_step(&batch)`.
 
 ### Vision
 
@@ -525,14 +634,16 @@ D:\Smallest language Model\
 ├── tokenizer.json        # generated after text training (tracked for deploys)
 ├── vision.json           # generated after vision training
 ├── turbo.bin             # generated compact Turbo model (~1 MB, tracked)
+├── dense.bin             # trained dense 100M model (~50 MB, tracked)
 └── src/
-    ├── main.rs           # CLI (train/generate/turbo-*/serve/vision-*)
+    ├── main.rs           # CLI (train/generate/turbo-*/dense-*/serve/vision-*)
     ├── lib.rs            # public API
     ├── tensor.rs         # from-scratch tensor math
     ├── layers.rs         # Linear + Embedding (forward/backward)
     ├── optimizer.rs      # SGD / Adam hyperparameters
     ├── model.rs          # CharLM, Trainer, Tokenizer (text)
     ├── turbo.rs          # LowRankLinear, TurboLM, TurboTrainer (compact)
+    ├── dense.rs          # dense 100M CharLM + 4-bit save/load + trainer
     ├── web.rs            # zero-dependency HTTP API + embedded browser UI
     └── vision.rs         # Tensor4, Conv2d, MaxPool2d, VisionCNN (images)
 ```

@@ -465,6 +465,38 @@ impl TurboTrainer {
 /// Generate text from a seed, padding the left context with spaces.
 ///
 /// This is the shared generation path used by the CLI and the HTTP server.
+/// Build a fixed-length context from a seed string.
+///
+/// Short seeds are repeated rather than padded with dozens of spaces, which
+/// keeps the context closer to the text distribution the model was trained on.
+pub fn context_from_seed(
+    tokenizer: &crate::model::Tokenizer,
+    seed: &str,
+    context: usize,
+) -> Vec<usize> {
+    let mut ids = tokenizer.encode(seed);
+    if ids.len() > context {
+        ids = ids[ids.len() - context..].to_vec();
+    }
+    if context == 0 || ids.len() == context {
+        return ids;
+    }
+    if ids.is_empty() {
+        ids.push(tokenizer.char_to_id.get(&' ').copied().unwrap_or(0));
+    }
+    let seed_ids = ids.clone();
+    while ids.len() < context {
+        let need = context - ids.len();
+        let take = need.min(seed_ids.len());
+        let mut next = Vec::with_capacity(take + ids.len());
+        next.extend_from_slice(&seed_ids[seed_ids.len() - take..]);
+        next.extend_from_slice(&ids);
+        ids = next;
+    }
+    ids
+}
+
+/// Generate text with a Turbo model.
 pub fn generate_text(
     model: &mut TurboLM,
     tokenizer: &crate::model::Tokenizer,
@@ -477,14 +509,7 @@ pub fn generate_text(
         return seed.to_string();
     }
 
-    let mut ctx = tokenizer.encode(seed);
-    if ctx.len() > context {
-        ctx = ctx[ctx.len() - context..].to_vec();
-    }
-    let pad = tokenizer.char_to_id.get(&' ').copied().unwrap_or(0);
-    while ctx.len() < context {
-        ctx.insert(0, pad);
-    }
+    let mut ctx = context_from_seed(tokenizer, seed, context);
 
     let mut generated = seed.to_string();
     for _ in 0..length {
@@ -524,6 +549,18 @@ pub fn sample(probs: &[f32], temperature: f32) -> usize {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn seed_context_repeats_short_prompts() {
+        let tok = crate::model::Tokenizer::from_text("ab c");
+        let ids = context_from_seed(&tok, "ab", 10);
+        assert_eq!(ids.len(), 10);
+        assert_eq!(tok.decode(&ids), "ababababab");
+        let truncated = context_from_seed(&tok, "abcabc", 3);
+        assert_eq!(tok.decode(&truncated), "abc");
+        let empty = context_from_seed(&tok, "", 5);
+        assert_eq!(empty.len(), 5);
+    }
 
     #[test]
     fn lowrank_forward_shape() {
