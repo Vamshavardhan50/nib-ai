@@ -4,6 +4,8 @@ A **from-scratch neural network in Rust**. It trains its own models — **no pre
 
 Smallest binary, fastest CPU training/inference, easy integration for any developer. Includes **TurboLM**: a 100M-shape language model in a **994,656-byte** file, and **DenseLM**: a true **90,004,008-weight** model stored in **45,117,066 bytes (45.12 MB)** at 4 bits — comfortably under 50 MB — plus a zero-dependency HTTP API and embeddable web UI.
 
+**Live:** [Browser UI](https://vamshavardhan50.github.io/nib-ai/) · [Documentation](https://vamshavardhan50.github.io/nib-ai/docs/)
+
 **Full documentation:** [docs/index.html](docs/index.html) · [Getting started](docs/getting-started.html) · [What you can do](docs/use-cases.html) · [HTTP API](docs/http-api.html) · [Models & training](docs/models.html) · [Deployment](docs/deployment.html)
 
 ## What "from scratch" means here
