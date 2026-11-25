@@ -11,9 +11,9 @@ model.json
 vision.json
 dense-bench.bin
 
-# tokenizer.json (2 KB), turbo.bin (~1 MB), and dense.bin (~50 MB) are
+# tokenizer.json (2 KB), turbo.bin (~1 MB), and nib.bin (45 MB) are
 # intentionally tracked so a GitHub/Docker deploy can serve the trained
-# models without re-training. dense.bin is 4-bit and under 100 MB.
+# models without re-training. nib.bin is 4-bit and under 50 MB.
 
 # Downloaded / generated corpora (regeneratable via get-data.ps1)
 tinyshakespeare.txt

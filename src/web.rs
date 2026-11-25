@@ -3,7 +3,7 @@
 //! One command turns the model into a JSON API and a demo website:
 //!
 //! ```text
-//! cactus serve --model turbo.bin --tokenizer tokenizer.json --port 8080
+//! nib serve --model turbo.bin --tokenizer tokenizer.json --port 8080
 //! ```
 //!
 //! The API has CORS enabled, so the same page (or your own site) can call it
@@ -103,7 +103,7 @@ fn load_engine(path: &str) -> Result<Engine> {
             dense::load_int4(path).with_context(|| format!("load dense model {path}"))?,
         )),
         _ => anyhow::bail!(
-            "{path} is not a cactus model (expected Turbo int8 or dense int4 format)"
+            "{path} is not a nib model (expected Turbo int8 or dense int4 format)"
         ),
     }
 }
@@ -127,7 +127,7 @@ struct GenerateRequest {
     temperature: Option<f32>,
 }
 
-/// The embedded browser UI (also used by `cactus web-export`).
+/// The embedded browser UI (also used by `nib web-export`).
 pub fn index_html() -> &'static str {
     INDEX_HTML
 }
@@ -159,7 +159,7 @@ pub fn serve(model_path: &str, tokenizer_path: &str, host: &str, port: u16) -> R
         .with_context(|| format!("bind {addr} (is another process using this port?)"))?;
 
     let ui_host = if host == "0.0.0.0" || host == "::" { "localhost" } else { host };
-    println!("cactus server listening on http://{ui_host}:{port}/");
+    println!("nib server listening on http://{ui_host}:{port}/");
     println!("API: POST http://{ui_host}:{port}/api/generate");
     println!(
         "model: {model_path} ({} bytes, {:.3} MB), CORS enabled",
@@ -185,7 +185,7 @@ pub fn serve(model_path: &str, tokenizer_path: &str, host: &str, port: u16) -> R
 
 fn handle(mut stream: TcpStream, app: &App) -> Result<()> {
     let _ = stream.set_read_timeout(Some(Duration::from_secs(30)));
-    // Dense 100M generation can take minutes for long outputs.
+    // Dense generation can take minutes for long outputs.
     let _ = stream.set_write_timeout(Some(Duration::from_secs(300)));
     let mut reader = BufReader::new(stream.try_clone()?);
 
@@ -361,7 +361,7 @@ fn openapi() -> Value {
     json!({
         "openapi": "3.1.0",
         "info": {
-            "title": "cactus-rs language model API",
+            "title": "nib-rs language model API",
             "version": env!("CARGO_PKG_VERSION"),
             "description": "Generate text with a from-scratch Turbo or dense language model."
         },
@@ -473,7 +473,7 @@ const INDEX_HTML: &str = r##"<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>cactus-rs · language model</title>
+<title>nib-rs · language model</title>
 <style>
 :root{--bg:#0b0d12;--panel:#12151d;--line:#252a36;--text:#eef1f7;--muted:#929caf;--accent:#7ce38b;--accent2:#6ea8fe;--danger:#ff7b72}
 *{box-sizing:border-box}
@@ -520,13 +520,13 @@ footer{margin-top:26px;color:var(--muted);font-size:12px;text-align:center}
 <body>
 <main>
 <header>
-  <div class="brand"><div class="logo">c</div><div><h1>cactus-rs · language model</h1><p class="sub">From-scratch Rust · 100M-parameter models</p></div></div>
+  <div class="brand"><div class="logo">n</div><div><h1>nib-rs · language model</h1><p class="sub">From-scratch Rust · 90M-weight dense · 1 MB Turbo</p></div></div>
   <div class="badge">model <b id="sizeBadge">loading…</b></div>
 </header>
 
 <section class="card">
   <label for="endpoint">API endpoint</label>
-  <input id="endpoint" type="url" placeholder="https://your-cactus-host" spellcheck="false">
+  <input id="endpoint" type="url" placeholder="https://your-nib-host" spellcheck="false">
   <div class="grid">
     <div><label for="prompt">Prompt</label><textarea id="prompt" spellcheck="false">First Citizen:
 Before we proceed any further, hear me speak.
@@ -549,11 +549,12 @@ Before we proceed any further, hear me speak.
   <div class="meta" id="meta">…</div>
   <details>
     <summary>Embed this on any website</summary>
-    <pre><code id="embed">&lt;iframe src="https://YOUR-HOST/" width="100%" height="760" style="border:0;border-radius:16px" title="cactus-rs language model"&gt;&lt;/iframe&gt;</code></pre>
+    <pre><code id="embed">&lt;iframe src="https://YOUR-HOST/" width="100%" height="760" style="border:0;border-radius:16px" title="nib-rs language model"&gt;&lt;/iframe&gt;</code></pre>
     <p>The page works from GitHub Pages, Netlify, Vercel, Cloudflare Pages, or any static host. Set <code>?api=https://your-host</code> or enter the API endpoint above; CORS is enabled on the server.</p>
   </details>
 </section>
-<footer>From-scratch Rust · no pre-trained weights · CPU inference</footer>
+<footer>From-scratch Rust · no pre-trained weights · CPU inference<br>
+<a href="https://vamshavardhan50.github.io/nib-ai/docs/">Documentation</a> · <a href="https://github.com/Vamshavardhan50/nib-ai">GitHub</a> · Apache-2.0</footer>
 </main>
 <script>
 (() => {
@@ -563,7 +564,7 @@ Before we proceed any further, hear me speak.
   const params = new URLSearchParams(location.search);
   const staticHost = /(^|\.)(github\.io|gitlab\.io|netlify\.app|vercel\.app|pages\.dev|web\.app|firebaseapp\.com|surge\.sh|onrender\.com|azurestaticapps\.net)$/.test(location.hostname);
   let saved = "";
-  try { saved = localStorage.getItem("cactus-api") || ""; } catch (e) {}
+  try { saved = localStorage.getItem("nib-api") || ""; } catch (e) {}
   let api = params.get("api") || saved || (location.protocol.startsWith("http") && !staticHost ? location.origin : "");
   let abort = null;
   endpoint.value = api;
@@ -571,7 +572,7 @@ Before we proceed any further, hear me speak.
   function setEmbed() {
     if (!location.protocol.startsWith("http")) return;
     const q = base() ? "?api=" + encodeURIComponent(base()) : "";
-    embed.textContent = '<iframe src="' + location.origin + location.pathname + q + '" width="100%" height="760" style="border:0;border-radius:16px" title="cactus-rs language model"></iframe>';
+    embed.textContent = '<iframe src="' + location.origin + location.pathname + q + '" width="100%" height="760" style="border:0;border-radius:16px" title="nib-rs language model"></iframe>';
   }
 
   const fmt = (n) => n >= 1e6 ? (n / 1e6).toFixed(2) + "M" : n >= 1e3 ? (n / 1e3).toFixed(1) + "K" : String(n);
@@ -580,9 +581,9 @@ Before we proceed any further, hear me speak.
 
   async function check() {
     api = endpoint.value.trim().replace(/\/+$/, "");
-    try { localStorage.setItem("cactus-api", api); } catch (e) {}
+    try { localStorage.setItem("nib-api", api); } catch (e) {}
     setEmbed();
-    if (!api) { setStatus("enter an API endpoint", "err"); meta.textContent = "Static hosting: point this page at a running cactus serve instance."; return; }
+    if (!api) { setStatus("enter an API endpoint", "err"); meta.textContent = "Static hosting: point this page at a running nib serve instance."; return; }
     setStatus("checking API…", "");
     try {
       const r = await fetch(base() + "/api/info", { cache: "no-store" });
@@ -605,7 +606,7 @@ Before we proceed any further, hear me speak.
       }
     } catch (e) {
       setStatus("API offline", "err");
-      meta.textContent = "Start it with: cactus serve --model turbo.bin (or dense.bin) --tokenizer tokenizer.json";
+      meta.textContent = "Start it with: nib serve --model turbo.bin (or nib.bin) --tokenizer tokenizer.json";
     }
   }
 
@@ -708,7 +709,7 @@ mod tests {
             init: Init::Xavier,
         });
         let path = std::env::temp_dir().join(format!(
-            "cactus-web-dense-test-{}.bin",
+            "nib-web-dense-test-{}.bin",
             std::process::id()
         ));
         let path_str = path.to_string_lossy().to_string();

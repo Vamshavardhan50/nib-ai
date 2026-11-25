@@ -1,4 +1,4 @@
-//! # cactus-rs
+//! # nib-rs
 //!
 //! A from-scratch neural network in Rust. Trains its own model — no pre-trained
 //! weights, no GGUF, no external model files. Smallest binary, fastest CPU
@@ -7,19 +7,19 @@
 //! Includes:
 //! - `model`  — character-level language model (text)
 //! - `turbo`  — compact 100M-shape low-rank language model (<1 MB on disk)
-//! - `dense`  — true 100M-weight dense model, 4-bit (~50 MB on disk)
+//! - `dense`  — true 90M-weight dense model, 4-bit (45 MB on disk)
 //! - `web`    — zero-dependency HTTP API + browser UI
 //! - `vision` — convolutional neural network (images)
 //!
 //! ## Quick start (developer)
 //!
 //! ```no_run
-//! use cactus_rs::{Tokenizer, CharLM, Trainer};
+//! use nib_rs::{Tokenizer, CharLM, Trainer};
 //!
 //! # fn main() -> anyhow::Result<()> {
 //! let text = "hello world";
 //! let tok = Tokenizer::from_text(text);
-//! let config = cactus_rs::ModelConfig {
+//! let config = nib_rs::ModelConfig {
 //!     vocab_size: tok.vocab_size(),
 //!     ..Default::default()
 //! };

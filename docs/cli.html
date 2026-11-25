@@ -1,0 +1,428 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CLI reference · nib-rs docs</title>
+<meta name="description" content="Complete nib-rs command-line reference: train, generate, Turbo, dense, serve, web-export, vision, and version commands with every flag and default.">
+<meta name="theme-color" content="#0f766e">
+<link rel="canonical" href="https://vamshavardhan50.github.io/nib-ai/docs/cli.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="nib-rs docs">
+<meta property="og:title" content="CLI reference · nib-rs docs">
+<meta property="og:description" content="Complete nib-rs command-line reference: train, generate, Turbo, dense, serve, web-export, vision, and version commands with every flag and default.">
+<meta property="og:url" content="https://vamshavardhan50.github.io/nib-ai/docs/cli.html">
+<meta name="twitter:card" content="summary">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230f766e'/%3E%3Ctext x='16' y='23' font-family='monospace' font-size='20' font-weight='bold' fill='%23e8fdf5' text-anchor='middle'%3En%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+<script>
+  try {
+    var saved = localStorage.getItem("nib-docs-theme");
+    if (saved === "light" || saved === "dark") document.documentElement.dataset.theme = saved;
+  } catch (e) {}
+</script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="topbar">
+  <a class="brand" href="index.html" aria-label="nib-rs documentation home">
+    <svg class="brand-mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M12 19l7-7 3 3-7 7-3-3z"></path>
+      <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"></path>
+      <path d="M2 2l7.586 7.586"></path>
+      <circle cx="11" cy="11" r="2"></circle>
+    </svg>
+    <span class="brand-name">nib<span class="brand-suffix">-rs</span></span>
+    <span class="brand-tag">docs</span>
+  </a>
+  <div class="topbar-actions">
+    <a class="pill" href="../index.html" title="Open the browser UI">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="14" rx="2"></rect><path d="M8 21h8M12 18v3"></path></svg>
+      <span class="label">Live UI</span>
+    </a>
+    <a class="pill" href="https://github.com/Vamshavardhan50/nib-ai" rel="noopener" title="GitHub repository">
+      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5a11.5 11.5 0 0 0-3.64 22.42c.58.1.79-.25.79-.56v-2.17c-3.22.7-3.9-1.37-3.9-1.37-.53-1.34-1.29-1.7-1.29-1.7-1.05-.72.08-.71.08-.71 1.16.08 1.77 1.2 1.77 1.2 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.57-.29-5.27-1.28-5.27-5.7 0-1.26.45-2.29 1.19-3.1-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11 11 0 0 1 5.8 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.12 3.05.74.81 1.18 1.84 1.18 3.1 0 4.43-2.7 5.4-5.28 5.69.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.56A11.5 11.5 0 0 0 12 .5z"></path></svg>
+      <span class="label">GitHub</span>
+    </a>
+    <button class="icon-btn" id="themeToggle" type="button" aria-label="Toggle theme">☾</button>
+    <button class="icon-btn" id="menuToggle" type="button" aria-label="Open navigation" aria-expanded="false" aria-controls="sidebar">☰</button>
+  </div>
+</header>
+
+<div class="shell">
+  <aside class="sidebar" id="sidebar">
+    <nav aria-label="Documentation">
+      <p class="nav-label">Documentation</p>
+      <a href="index.html">Overview</a>
+        <a href="getting-started.html">Getting started</a>
+        <a href="use-cases.html">What you can do</a>
+        <a href="cli.html">CLI reference</a>
+        <a href="http-api.html">HTTP API</a>
+        <a href="rust-api.html">Rust API</a>
+        <a href="models.html">Models &amp; training</a>
+        <a href="deployment.html">Deployment</a>
+        <a href="faq.html">FAQ</a>
+    </nav>
+    <div class="toc" id="toc" aria-label="On this page"></div>
+    <div class="sidebar-card">
+      <span class="k">Shipped dense model</span>
+      <span class="v">90,004,008 weights</span>
+      <small>45,117,066 bytes · 4-bit · v0.1.0</small>
+    </div>
+  </aside>
+
+  <main id="main">
+    <article>
+      <div class="crumbs"><a href="index.html">Docs</a> <span>/</span> <span>CLI reference</span></div>
+      
+<section class="hero">
+  <p class="eyebrow">Reference</p>
+  <h1>CLI reference</h1>
+  <p class="lead">
+    One binary, <code>nib</code>, contains the trainers, generators, HTTP server, static UI
+    exporter, and vision tools. Run <code>nib &lt;command&gt; --help</code> for the same
+    information from the terminal.
+  </p>
+</section>
+
+<h2>Synopsis</h2>
+<pre><code>nib &lt;command&gt; [options]</code></pre>
+<p>Windows users can call <code>./target/release/nib.exe</code>; every example below uses the portable forward-slash form.</p>
+
+<h2>Command index</h2>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Command</th><th>Purpose</th><th>Output</th></tr></thead>
+  <tbody>
+    <tr><td><code>train</code></td><td>Train a character-level MLP from text</td><td><code>model.json</code></td></tr>
+    <tr><td><code>generate</code></td><td>Sample text from a CharLM JSON model</td><td>stdout</td></tr>
+    <tr><td><code>turbo-info</code></td><td>Show Turbo parameter and file-size math</td><td>stdout</td></tr>
+    <tr><td><code>turbo-train</code></td><td>Train a compact low-rank model</td><td><code>turbo.bin</code></td></tr>
+    <tr><td><code>turbo-generate</code></td><td>Sample text from a Turbo model</td><td>stdout</td></tr>
+    <tr><td><code>dense-info</code></td><td>Show dense parameter and 4-bit size math</td><td>stdout</td></tr>
+    <tr><td><code>dense-build</code></td><td>Materialize Turbo factors into dense matrices</td><td><code>nib.bin</code></td></tr>
+    <tr><td><code>dense-train</code></td><td>Train, fine-tune, resume, or prune a dense model</td><td><code>nib.bin</code></td></tr>
+    <tr><td><code>dense-generate</code></td><td>Sample text from a dense 4-bit model</td><td>stdout</td></tr>
+    <tr><td><code>serve</code></td><td>Serve Turbo or dense model over HTTP</td><td>long-running server</td></tr>
+    <tr><td><code>web-export</code></td><td>Write the browser UI to a static HTML file</td><td><code>index.html</code></td></tr>
+    <tr><td><code>vision-train</code></td><td>Train a CNN from a labeled image manifest</td><td><code>vision.json</code></td></tr>
+    <tr><td><code>vision-predict</code></td><td>Classify one image</td><td>stdout</td></tr>
+    <tr><td><code>version</code></td><td>Print the package version</td><td>stdout</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h2>Conventions</h2>
+<ul>
+  <li><strong>Short flags</strong> exist where noted: <code>-i</code> input, <code>-o</code> output, <code>-m</code> model, <code>-s</code> seed, <code>-e</code> epochs.</li>
+  <li><strong>Paths</strong> are resolved relative to the current directory. Run commands from the repository root unless you pass absolute paths.</li>
+  <li><strong>Tokenizers must match the model vocabulary.</strong> A 62-token tokenizer cannot load a 65-token model.</li>
+  <li><strong>All training is CPU-only</strong> and uses plain SGD. The <code>--optimizer</code> flag on <code>train</code> is accepted but the current training step always applies SGD.</li>
+  <li><strong>Loss</strong> is mean cross-entropy over the epoch or logging window. It is a training loss, not validation accuracy.</li>
+</ul>
+
+<h2>Text model commands</h2>
+
+<h3><code>nib train</code></h3>
+<p>Train a small character-level MLP. The tokenizer is built from the input text and saved to the tokenizer path.</p>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Flag</th><th>Default</th><th>Meaning</th></tr></thead>
+  <tbody>
+    <tr><td><code>--input, -i</code></td><td><code>data.txt</code></td><td>Training text file</td></tr>
+    <tr><td><code>--output, -o</code></td><td><code>model.json</code></td><td>Output model path</td></tr>
+    <tr><td><code>--tokenizer</code></td><td><code>tokenizer.json</code></td><td>Where to save the built tokenizer</td></tr>
+    <tr><td><code>--context</code></td><td><code>8</code></td><td>Characters of context</td></tr>
+    <tr><td><code>--hidden</code></td><td><code>64</code></td><td>Hidden units</td></tr>
+    <tr><td><code>--embed</code></td><td><code>16</code></td><td>Embedding width</td></tr>
+    <tr><td><code>--lr</code></td><td><code>0.1</code></td><td>Learning rate</td></tr>
+    <tr><td><code>--epochs, -e</code></td><td><code>200</code></td><td>Passes over the training windows</td></tr>
+    <tr><td><code>--optimizer</code></td><td><code>sgd</code></td><td>Accepted for compatibility; SGD is used</td></tr>
+  </tbody>
+</table>
+</div>
+<pre><code>nib train --input shakespeare.txt --output model.json --tokenizer tokenizer.json \
+  --context 12 --hidden 128 --embed 24 --epochs 40 --lr 0.1</code></pre>
+
+<h3><code>nib generate</code></h3>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Flag</th><th>Default</th><th>Meaning</th></tr></thead>
+  <tbody>
+    <tr><td><code>--model, -m</code></td><td><code>model.json</code></td><td>CharLM JSON model</td></tr>
+    <tr><td><code>--tokenizer</code></td><td><code>tokenizer.json</code></td><td>Tokenizer file</td></tr>
+    <tr><td><code>--seed, -s</code></td><td>empty</td><td>Prompt text</td></tr>
+    <tr><td><code>--length</code></td><td><code>200</code></td><td>Characters to generate</td></tr>
+    <tr><td><code>--temperature</code></td><td><code>1.0</code></td><td>Sampling temperature</td></tr>
+  </tbody>
+</table>
+</div>
+<pre><code>nib generate --model model.json --tokenizer tokenizer.json \
+  --seed "ROMEO: " --length 500 --temperature 0.7</code></pre>
+
+<h2>Turbo commands</h2>
+
+<h3><code>nib turbo-info</code></h3>
+<p>Prints the logical dense shape, stored parameter count, and estimated int8 file size. Nothing is written.</p>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Flag</th><th>Default</th><th>Meaning</th></tr></thead>
+  <tbody>
+    <tr><td><code>--target</code></td><td><code>100000000</code></td><td>Dense logical parameter target</td></tr>
+    <tr><td><code>--vocab</code></td><td><code>62</code></td><td>Vocabulary size</td></tr>
+    <tr><td><code>--context</code></td><td><code>64</code></td><td>Context length</td></tr>
+    <tr><td><code>--embed</code></td><td><code>128</code></td><td>Embedding width</td></tr>
+    <tr><td><code>--rank</code></td><td><code>30</code></td><td>Low-rank factor width</td></tr>
+    <tr><td><code>--tokenizer</code></td><td>none</td><td>Read the vocabulary size from a tokenizer file</td></tr>
+  </tbody>
+</table>
+</div>
+<pre><code>nib turbo-info --target 100000000 --tokenizer tokenizer.json</code></pre>
+
+<h3><code>nib turbo-train</code></h3>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Flag</th><th>Default</th><th>Meaning</th></tr></thead>
+  <tbody>
+    <tr><td><code>--input, -i</code></td><td><code>shakespeare.txt</code></td><td>Training text</td></tr>
+    <tr><td><code>--output, -o</code></td><td><code>turbo.bin</code></td><td>Output artifact</td></tr>
+    <tr><td><code>--tokenizer</code></td><td><code>tokenizer.json</code></td><td>Tokenizer path; built if missing</td></tr>
+    <tr><td><code>--target</code></td><td><code>100000000</code></td><td>Dense logical parameter target</td></tr>
+    <tr><td><code>--context</code></td><td><code>64</code></td><td>Context length</td></tr>
+    <tr><td><code>--embed</code></td><td><code>128</code></td><td>Embedding width</td></tr>
+    <tr><td><code>--rank</code></td><td><code>30</code></td><td>Low-rank factor width</td></tr>
+    <tr><td><code>--lr</code></td><td><code>0.05</code></td><td>Learning rate</td></tr>
+    <tr><td><code>--epochs, -e</code></td><td><code>5</code></td><td>Training epochs</td></tr>
+    <tr><td><code>--batch-size</code></td><td><code>32</code></td><td>Mini-batch size</td></tr>
+    <tr><td><code>--max-samples</code></td><td><code>0</code></td><td>Windows per epoch; <code>0</code> means all</td></tr>
+  </tbody>
+</table>
+</div>
+<pre><code>nib turbo-train --input shakespeare.txt --output turbo.bin \
+  --tokenizer tokenizer.json --target 100000000 --context 64 \
+  --embed 128 --rank 30 --epochs 5 --lr 0.05 --batch-size 32</code></pre>
+
+<h3><code>nib turbo-generate</code></h3>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Flag</th><th>Default</th><th>Meaning</th></tr></thead>
+  <tbody>
+    <tr><td><code>--model, -m</code></td><td><code>turbo.bin</code></td><td>Turbo int8 model</td></tr>
+    <tr><td><code>--tokenizer</code></td><td><code>tokenizer.json</code></td><td>Tokenizer file</td></tr>
+    <tr><td><code>--seed, -s</code></td><td><code>ROMEO: </code></td><td>Prompt text</td></tr>
+    <tr><td><code>--length</code></td><td><code>500</code></td><td>Characters to generate</td></tr>
+    <tr><td><code>--temperature</code></td><td><code>0.7</code></td><td>Sampling temperature</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h2>Dense commands</h2>
+
+<h3><code>nib dense-info</code></h3>
+<p>Prints the dense shape, exact parameter count, and exact 4-bit file size. Add <code>--hidden</code> to check a pruned configuration without building it.</p>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Flag</th><th>Default</th><th>Meaning</th></tr></thead>
+  <tbody>
+    <tr><td><code>--target</code></td><td><code>100000000</code></td><td>Parameter target when <code>--hidden</code> is 0</td></tr>
+    <tr><td><code>--vocab</code></td><td><code>62</code></td><td>Vocabulary size</td></tr>
+    <tr><td><code>--context</code></td><td><code>64</code></td><td>Context length</td></tr>
+    <tr><td><code>--embed</code></td><td><code>128</code></td><td>Embedding width</td></tr>
+    <tr><td><code>--hidden</code></td><td><code>0</code></td><td>Explicit hidden size; <code>0</code> derives it from <code>--target</code></td></tr>
+    <tr><td><code>--tokenizer</code></td><td>none</td><td>Read vocabulary size from a tokenizer file</td></tr>
+  </tbody>
+</table>
+</div>
+<pre><code>nib dense-info --hidden 10902 --tokenizer tokenizer.json</code></pre>
+
+<h3><code>nib dense-build</code></h3>
+<p>Expands a trained Turbo model into full dense matrices (<code>W = U·V</code>). The output has the same predictions as the Turbo model, up to f32 rounding.</p>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Flag</th><th>Default</th><th>Meaning</th></tr></thead>
+  <tbody>
+    <tr><td><code>--turbo</code></td><td><code>turbo.bin</code></td><td>Source Turbo model</td></tr>
+    <tr><td><code>--output, -o</code></td><td><code>nib.bin</code></td><td>Dense output path</td></tr>
+    <tr><td><code>--tokenizer</code></td><td><code>tokenizer.json</code></td><td>Tokenizer for vocabulary validation</td></tr>
+  </tbody>
+</table>
+</div>
+<pre><code>nib dense-build --turbo turbo.bin --output dense-100m.bin --tokenizer tokenizer.json</code></pre>
+
+<h3><code>nib dense-train</code></h3>
+<p>
+  Trains a dense model from random weights, fine-tunes a Turbo expansion, resumes a dense
+  artifact, or prunes and fine-tunes a smaller sub-network. The output is always a complete
+  dense 4-bit file.
+</p>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Flag</th><th>Default</th><th>Meaning</th></tr></thead>
+  <tbody>
+    <tr><td><code>--input, -i</code></td><td><code>shakespeare.txt</code></td><td>Training text</td></tr>
+    <tr><td><code>--output, -o</code></td><td><code>nib.bin</code></td><td>Dense output path</td></tr>
+    <tr><td><code>--tokenizer</code></td><td><code>tokenizer.json</code></td><td>Tokenizer path</td></tr>
+    <tr><td><code>--init-turbo</code></td><td>none</td><td>Expand this Turbo model, then fine-tune all weights</td></tr>
+    <tr><td><code>--init-dense</code></td><td>none</td><td>Resume from this dense 4-bit model</td></tr>
+    <tr><td><code>--hidden</code></td><td><code>0</code></td><td>Random init: derive hidden size. With <code>--init-dense</code>: prune to this size</td></tr>
+    <tr><td><code>--target</code></td><td><code>100000000</code></td><td>Random-init parameter target</td></tr>
+    <tr><td><code>--context</code></td><td><code>64</code></td><td>Random-init context length</td></tr>
+    <tr><td><code>--embed</code></td><td><code>128</code></td><td>Random-init embedding width</td></tr>
+    <tr><td><code>--lr</code></td><td><code>0.02</code></td><td>Learning rate</td></tr>
+    <tr><td><code>--epochs, -e</code></td><td><code>1</code></td><td>Training epochs</td></tr>
+    <tr><td><code>--batch-size</code></td><td><code>128</code></td><td>Mini-batch size</td></tr>
+    <tr><td><code>--max-samples</code></td><td><code>20000</code></td><td>Windows per epoch; <code>0</code> means all</td></tr>
+  </tbody>
+</table>
+</div>
+<div class="callout">
+  <strong>How pruning works</strong>
+  <p>
+    <code>--hidden</code> with <code>--init-dense</code> ranks hidden units by the L2 norm of
+    their outgoing <code>fc2</code> weights, keeps the strongest units in their original order,
+    and fine-tunes the resulting sub-network. The saved file is fully dense, not low-rank.
+  </p>
+</div>
+<pre><code># Fine-tune a 100M dense model from Turbo
+nib dense-train --input shakespeare.txt --output dense-100m.bin \
+  --tokenizer tokenizer.json --init-turbo turbo.bin \
+  --epochs 2 --max-samples 20000 --batch-size 128 --lr 0.02
+
+# Prune to 90M and fine-tune
+nib dense-train --input shakespeare.txt --output nib.bin \
+  --tokenizer tokenizer.json --init-dense dense-100m.bin --hidden 10902 \
+  --epochs 3 --max-samples 20000 --batch-size 128 --lr 0.01</code></pre>
+
+<h3><code>nib dense-generate</code></h3>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Flag</th><th>Default</th><th>Meaning</th></tr></thead>
+  <tbody>
+    <tr><td><code>--model, -m</code></td><td><code>nib.bin</code></td><td>Dense 4-bit model</td></tr>
+    <tr><td><code>--tokenizer</code></td><td><code>tokenizer.json</code></td><td>Tokenizer file</td></tr>
+    <tr><td><code>--seed, -s</code></td><td><code>ROMEO: </code></td><td>Prompt text</td></tr>
+    <tr><td><code>--length</code></td><td><code>300</code></td><td>Characters to generate</td></tr>
+    <tr><td><code>--temperature</code></td><td><code>0.7</code></td><td>Sampling temperature</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h2>Serving commands</h2>
+
+<h3><code>nib serve</code></h3>
+<p>Starts the HTTP API, CORS preflight, OpenAPI document, and browser UI. The model format is detected from the first eight bytes, so the same command works for <code>turbo.bin</code> and <code>nib.bin</code>.</p>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Flag</th><th>Default</th><th>Meaning</th></tr></thead>
+  <tbody>
+    <tr><td><code>--model, -m</code></td><td><code>turbo.bin</code></td><td>Turbo or dense model</td></tr>
+    <tr><td><code>--tokenizer</code></td><td><code>tokenizer.json</code></td><td>Tokenizer file</td></tr>
+    <tr><td><code>--host</code></td><td><code>0.0.0.0</code></td><td>Bind address; use <code>127.0.0.1</code> for local-only</td></tr>
+    <tr><td><code>--port</code></td><td><code>8080</code></td><td>TCP port</td></tr>
+  </tbody>
+</table>
+</div>
+<pre><code>nib serve --model nib.bin --tokenizer tokenizer.json --host 127.0.0.1 --port 8080
+nib serve --model turbo.bin --tokenizer tokenizer.json --host 0.0.0.0 --port 8080</code></pre>
+
+<h3><code>nib web-export</code></h3>
+<p>Writes the embedded browser UI to a single HTML file. The page has no build step and no external assets; host it anywhere static and add <code>?api=https://your-host</code>.</p>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Flag</th><th>Default</th><th>Meaning</th></tr></thead>
+  <tbody><tr><td><code>--output, -o</code></td><td><code>index.html</code></td><td>Destination HTML file</td></tr></tbody>
+</table>
+</div>
+<pre><code>nib web-export --output index.html</code></pre>
+
+<h2>Vision commands</h2>
+
+<h3><code>nib vision-train</code></h3>
+<p>The manifest is one <code>image_path label</code> pair per line. Labels are zero-based integers.</p>
+<pre><code>data/cats/001.jpg 0
+data/dogs/002.jpg 1</code></pre>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Flag</th><th>Default</th><th>Meaning</th></tr></thead>
+  <tbody>
+    <tr><td><code>--manifest, -i</code></td><td><code>manifest.txt</code></td><td>Image/label list</td></tr>
+    <tr><td><code>--output, -o</code></td><td><code>vision.json</code></td><td>Output model</td></tr>
+    <tr><td><code>--image-size</code></td><td><code>16</code></td><td>Square input size</td></tr>
+    <tr><td><code>--channels</code></td><td><code>1</code></td><td>1 = grayscale, 3 = RGB</td></tr>
+    <tr><td><code>--classes</code></td><td><code>10</code></td><td>Number of labels</td></tr>
+    <tr><td><code>--lr</code></td><td><code>0.01</code></td><td>Learning rate</td></tr>
+    <tr><td><code>--epochs, -e</code></td><td><code>10</code></td><td>Training epochs</td></tr>
+    <tr><td><code>--batch-size</code></td><td><code>16</code></td><td>Mini-batch size</td></tr>
+  </tbody>
+</table>
+</div>
+<pre><code>nib vision-train --manifest manifest.txt --output vision.json \
+  --classes 2 --image-size 32 --epochs 20</code></pre>
+
+<h3><code>nib vision-predict</code></h3>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Flag</th><th>Default</th><th>Meaning</th></tr></thead>
+  <tbody>
+    <tr><td><code>--model, -m</code></td><td><code>vision.json</code></td><td>Trained CNN</td></tr>
+    <tr><td><code>--image, -i</code></td><td>required</td><td>Image to classify</td></tr>
+    <tr><td><code>--classes</code></td><td>none</td><td>Optional names, one per line</td></tr>
+  </tbody>
+</table>
+</div>
+<pre><code>nib vision-predict --model vision.json --image data/cats/new.jpg --classes classes.txt</code></pre>
+
+<h2><code>nib version</code></h2>
+<pre><code>nib version
+# nib-rs 0.1.0</code></pre>
+
+<h2>Recipes</h2>
+<h3>Use your own corpus</h3>
+<pre><code>nib train --input mydata.txt --output model.json --tokenizer my-tokenizer.json \
+  --context 24 --hidden 192 --embed 32 --epochs 60
+
+nib turbo-train --input mydata.txt --output my-turbo.bin \
+  --tokenizer my-tokenizer.json --context 64 --embed 128 --rank 30 --epochs 5</code></pre>
+<h3>Produce a 90M model under 50 MB from scratch</h3>
+<pre><code>nib turbo-train --input shakespeare.txt --output turbo.bin --tokenizer tokenizer.json \
+  --context 64 --embed 128 --rank 30 --epochs 5
+
+nib dense-build --turbo turbo.bin --output dense-100m.bin --tokenizer tokenizer.json
+
+nib dense-train --input shakespeare.txt --output dense-100m.bin --tokenizer tokenizer.json \
+  --init-turbo turbo.bin --epochs 2 --max-samples 20000 --batch-size 128 --lr 0.02
+
+nib dense-train --input shakespeare.txt --output nib.bin --tokenizer tokenizer.json \
+  --init-dense dense-100m.bin --hidden 10902 --epochs 3 --max-samples 20000 --batch-size 128 --lr 0.01
+
+nib dense-info --hidden 10902 --tokenizer tokenizer.json</code></pre>
+<h3>Resume dense training</h3>
+<pre><code>nib dense-train --input shakespeare.txt --output nib.bin --tokenizer tokenizer.json \
+  --init-dense nib.bin --epochs 1 --max-samples 20000 --batch-size 128 --lr 0.005</code></pre>
+<h3>Smoke test a server</h3>
+<pre><code>nib serve --model nib.bin --tokenizer tokenizer.json --host 127.0.0.1 --port 8092
+curl http://127.0.0.1:8092/health
+curl http://127.0.0.1:8092/api/info</code></pre>
+
+      <footer class="footer">
+        <div class="footer-row">
+          <span><strong>nib-rs</strong> 0.1.0</span>
+          <span class="dotsep">·</span>
+          <span>Apache-2.0</span>
+          <span class="dotsep">·</span>
+          <a href="https://github.com/Vamshavardhan50/nib-ai" rel="noopener">GitHub</a>
+          <span class="dotsep">·</span>
+          <a href="https://github.com/Vamshavardhan50/nib-ai/issues" rel="noopener">Issues</a>
+          <span class="dotsep">·</span>
+          <a href="index.html">Docs home</a>
+        </div>
+        <p class="small muted">Built from scratch in Rust. No pre-trained weights, no external model files.</p>
+      </footer>
+    </article>
+  </main>
+</div>
+
+<script src="docs.js" defer></script>
+</body>
+</html>

@@ -1,16 +1,18 @@
-//! Dense 100M-parameter language model with 4-bit persistence.
+//! Dense language model with 4-bit persistence.
 //!
 //! The model is a normal 2-layer MLP:
 //!
 //!   embed(context chars) -> flatten -> Linear -> ReLU -> Linear -> logits
 //!
-//! With `context=64`, `embed=128`, `hidden=12114`, `vocab=62` it has
-//! **100,009,068 independent weights**. At 4 bits per weight the file is about
-//! **50 MB**, comfortably under 100 MB.
+//! The shipped configuration uses `context=64`, `embed=128`, `hidden=10902`,
+//! `vocab=62`: **90,004,008 independent weights** in **45,117,066 bytes** at
+//! 4 bits per weight. The full `hidden=12114` configuration has 100,009,068
+//! weights and a 50,128,686-byte file.
 //!
-//! The model can be trained directly with [`DenseTrainer`], or initialized by
-//! materializing a trained low-rank Turbo model with [`from_turbo`] and then
-//! fine-tuned. The final file always stores the full dense matrices.
+//! The model can be trained directly with [`DenseTrainer`], initialized by
+//! materializing a trained low-rank Turbo model with [`from_turbo`], or pruned
+//! with [`prune_hidden`] and then fine-tuned. The final file always stores the
+//! full dense matrices.
 
 use crate::layers::Init;
 use crate::model::{CharLM, ModelConfig, Tokenizer};
@@ -70,6 +72,58 @@ pub fn from_turbo(turbo: &TurboLM) -> CharLM {
     model.fc2.weight.data = turbo.fc2.u.data.dot(&turbo.fc2.v.data);
     model.fc2.bias.data.assign(&turbo.fc2.bias.data);
     model
+}
+
+/// Keep the most important hidden units and return a smaller dense model.
+///
+/// Units are ranked by the L2 norm of their outgoing `fc2` weights, which
+/// measures how strongly each one affects the logits. The kept units are
+/// restored to their original order, producing a direct sub-network that can
+/// be fine-tuned on real text.
+pub fn prune_hidden(model: &CharLM, hidden: usize) -> anyhow::Result<CharLM> {
+    let old_hidden = model.config.hidden_dim;
+    if hidden == 0 {
+        anyhow::bail!("hidden size must be at least 1");
+    }
+    if hidden > old_hidden {
+        anyhow::bail!("cannot grow hidden size from {old_hidden} to {hidden}");
+    }
+    if hidden == old_hidden {
+        return Ok(model.clone());
+    }
+
+    let vocab = model.config.vocab_size;
+    let in_features = model.config.context * model.config.embed_dim;
+    let mut ranked: Vec<(usize, f32)> = (0..old_hidden)
+        .map(|unit| {
+            let score = (0..vocab)
+                .map(|v| model.fc2.weight.data[[unit, v]].powi(2))
+                .sum::<f32>()
+                .sqrt();
+            (unit, score)
+        })
+        .collect();
+    ranked.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+    let mut keep: Vec<usize> = ranked.into_iter().take(hidden).map(|(unit, _)| unit).collect();
+    keep.sort_unstable();
+
+    let config = ModelConfig {
+        hidden_dim: hidden,
+        ..model.config.clone()
+    };
+    let mut out = CharLM::new(config);
+    out.embed.weight.data.assign(&model.embed.weight.data);
+    out.fc2.bias.data.assign(&model.fc2.bias.data);
+    for (new_unit, &old_unit) in keep.iter().enumerate() {
+        for i in 0..in_features {
+            out.fc1.weight.data[[i, new_unit]] = model.fc1.weight.data[[i, old_unit]];
+        }
+        out.fc1.bias.data[new_unit] = model.fc1.bias.data[old_unit];
+        for v in 0..vocab {
+            out.fc2.weight.data[[new_unit, v]] = model.fc2.weight.data[[old_unit, v]];
+        }
+    }
+    Ok(out)
 }
 
 /// Save a dense model as 4-bit weights with one scale per row.
@@ -181,9 +235,8 @@ impl DenseTrainer {
         Self { model, lr }
     }
 
-    /// Train on a mini-batch. Uses matrix batches so the 100M-weight layers
-    /// are updated with efficient matrix multiplies instead of per-sample
-    /// loops.
+    /// Train on a mini-batch. Uses matrix batches so the large layers are
+    /// updated with efficient matrix multiplies instead of per-sample loops.
     pub fn train_step(&mut self, batches: &[(Vec<usize>, usize)]) -> f32 {
         if batches.is_empty() {
             return 0.0;
@@ -359,10 +412,44 @@ mod tests {
     }
 
     #[test]
+    fn shipped_dense_size_matches_docs() {
+        let config = ModelConfig {
+            vocab_size: 62,
+            embed_dim: 128,
+            hidden_dim: 10902,
+            context: 64,
+            init: Init::Xavier,
+        };
+        assert_eq!(params(&config), 90_004_008);
+        assert_eq!(quantized_bytes(&config), 45_117_066);
+
+        let full = ModelConfig {
+            hidden_dim: 12114,
+            ..config
+        };
+        assert_eq!(params(&full), 100_009_068);
+        assert_eq!(quantized_bytes(&full), 50_128_686);
+    }
+
+    #[test]
+    fn prune_hidden_shrinks_model() {
+        let mut model = CharLM::new(ModelConfig {
+            hidden_dim: 16,
+            ..tiny_config()
+        });
+        let mut pruned = prune_hidden(&model, 8).unwrap();
+        assert_eq!(pruned.config.hidden_dim, 8);
+        assert!(params(&pruned.config) < params(&model.config));
+        let logits = pruned.predict(&[0usize, 1, 2]);
+        assert_eq!(logits.len(), 8);
+        assert!(prune_hidden(&model, 17).is_err());
+    }
+
+    #[test]
     fn int4_roundtrip_preserves_predictions() {
         let mut model = CharLM::new(tiny_config());
         let path = std::env::temp_dir().join(format!(
-            "cactus-dense-test-{}.bin",
+            "nib-dense-test-{}.bin",
             std::process::id()
         ));
         let path_str = path.to_string_lossy().to_string();

@@ -1,0 +1,392 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Models &amp; training · nib-rs docs</title>
+<meta name="description" content="How nib-rs models work: CharLM, low-rank TurboLM, dense 90M DenseLM, parameter and file-size math, 4-bit quantization, pruning, real Shakespeare data, training results, and benchmarks.">
+<meta name="theme-color" content="#0f766e">
+<link rel="canonical" href="https://vamshavardhan50.github.io/nib-ai/docs/models.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="nib-rs docs">
+<meta property="og:title" content="Models &amp; training · nib-rs docs">
+<meta property="og:description" content="How nib-rs models work: CharLM, low-rank TurboLM, dense 90M DenseLM, parameter and file-size math, 4-bit quantization, pruning, real Shakespeare data, training results, and benchmarks.">
+<meta property="og:url" content="https://vamshavardhan50.github.io/nib-ai/docs/models.html">
+<meta name="twitter:card" content="summary">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230f766e'/%3E%3Ctext x='16' y='23' font-family='monospace' font-size='20' font-weight='bold' fill='%23e8fdf5' text-anchor='middle'%3En%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+<script>
+  try {
+    var saved = localStorage.getItem("nib-docs-theme");
+    if (saved === "light" || saved === "dark") document.documentElement.dataset.theme = saved;
+  } catch (e) {}
+</script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="topbar">
+  <a class="brand" href="index.html" aria-label="nib-rs documentation home">
+    <svg class="brand-mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M12 19l7-7 3 3-7 7-3-3z"></path>
+      <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"></path>
+      <path d="M2 2l7.586 7.586"></path>
+      <circle cx="11" cy="11" r="2"></circle>
+    </svg>
+    <span class="brand-name">nib<span class="brand-suffix">-rs</span></span>
+    <span class="brand-tag">docs</span>
+  </a>
+  <div class="topbar-actions">
+    <a class="pill" href="../index.html" title="Open the browser UI">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="14" rx="2"></rect><path d="M8 21h8M12 18v3"></path></svg>
+      <span class="label">Live UI</span>
+    </a>
+    <a class="pill" href="https://github.com/Vamshavardhan50/nib-ai" rel="noopener" title="GitHub repository">
+      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5a11.5 11.5 0 0 0-3.64 22.42c.58.1.79-.25.79-.56v-2.17c-3.22.7-3.9-1.37-3.9-1.37-.53-1.34-1.29-1.7-1.29-1.7-1.05-.72.08-.71.08-.71 1.16.08 1.77 1.2 1.77 1.2 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.57-.29-5.27-1.28-5.27-5.7 0-1.26.45-2.29 1.19-3.1-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11 11 0 0 1 5.8 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.12 3.05.74.81 1.18 1.84 1.18 3.1 0 4.43-2.7 5.4-5.28 5.69.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.56A11.5 11.5 0 0 0 12 .5z"></path></svg>
+      <span class="label">GitHub</span>
+    </a>
+    <button class="icon-btn" id="themeToggle" type="button" aria-label="Toggle theme">☾</button>
+    <button class="icon-btn" id="menuToggle" type="button" aria-label="Open navigation" aria-expanded="false" aria-controls="sidebar">☰</button>
+  </div>
+</header>
+
+<div class="shell">
+  <aside class="sidebar" id="sidebar">
+    <nav aria-label="Documentation">
+      <p class="nav-label">Documentation</p>
+      <a href="index.html">Overview</a>
+        <a href="getting-started.html">Getting started</a>
+        <a href="use-cases.html">What you can do</a>
+        <a href="cli.html">CLI reference</a>
+        <a href="http-api.html">HTTP API</a>
+        <a href="rust-api.html">Rust API</a>
+        <a href="models.html">Models &amp; training</a>
+        <a href="deployment.html">Deployment</a>
+        <a href="faq.html">FAQ</a>
+    </nav>
+    <div class="toc" id="toc" aria-label="On this page"></div>
+    <div class="sidebar-card">
+      <span class="k">Shipped dense model</span>
+      <span class="v">90,004,008 weights</span>
+      <small>45,117,066 bytes · 4-bit · v0.1.0</small>
+    </div>
+  </aside>
+
+  <main id="main">
+    <article>
+      <div class="crumbs"><a href="index.html">Docs</a> <span>/</span> <span>Models &amp; training</span></div>
+      
+<section class="hero">
+  <p class="eyebrow">Deep dive</p>
+  <h1>Models &amp; training</h1>
+  <p class="lead">
+    Four model families, one set of hand-written layers. This page explains the architectures,
+    the exact parameter and file-size math, how the shipped 90M model was trained and pruned,
+    and what the numbers do and do not mean.
+  </p>
+</section>
+
+<h2>Model family</h2>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Model</th><th>Architecture</th><th>Parameters</th><th>Artifact</th></tr></thead>
+  <tbody>
+    <tr><td><strong>CharLM</strong></td><td>Embedding → flatten → Linear → ReLU → Linear</td><td>Configurable</td><td>JSON, f32</td></tr>
+    <tr><td><strong>TurboLM</strong></td><td>Same MLP shape with low-rank <code>U·V</code> factors</td><td>100,009,068 logical / 994,572 stored</td><td>int8, 994,656 bytes</td></tr>
+    <tr><td><strong>DenseLM</strong></td><td>Same MLP shape with full dense matrices</td><td>90,004,008</td><td>4-bit, 45,117,066 bytes</td></tr>
+    <tr><td><strong>VisionCNN</strong></td><td>Conv → pool → conv → pool → Linear</td><td>Configurable</td><td>JSON, f32</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h2>CharLM</h2>
+<p>A character-level two-layer MLP. For a context of <code>C</code> characters, an embedding width <code>E</code>, hidden width <code>H</code>, and vocabulary <code>V</code>:</p>
+<pre><code>input ids (C) → embedding (C × E) → flatten (C·E)
+→ Linear(C·E → H) → ReLU
+→ Linear(H → V) → softmax → next character</code></pre>
+<p>Parameters:</p>
+<pre><code>P = V·E + C·E·H + H + H·V + V</code></pre>
+<p>
+  The first term is the embedding table, the second is <code>fc1</code>, then its bias, then
+  <code>fc2</code> and its bias. The trainer uses cross-entropy loss and plain SGD with
+  gradients averaged over the batch.
+</p>
+
+<h2>TurboLM</h2>
+<p>
+  Turbo keeps the same 100M-entry shape but stores each large matrix as two thin factors:
+</p>
+<pre><code>fc1: (C·E = 8192) × (H = 12114)  →  U(8192 × 30) · V(30 × 12114)
+fc2: (H = 12114) × (V = 62)      →  U(12114 × 30) · V(30 × 62)</code></pre>
+<p>With <code>V=62, E=128, C=64, H=12114, rank=30</code>:</p>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Item</th><th class="num">Count</th></tr></thead>
+  <tbody>
+    <tr><td>Logical dense parameters</td><td class="num">100,009,068</td></tr>
+    <tr><td>Stored factors, embedding, biases</td><td class="num">994,572</td></tr>
+    <tr><td>File after int8 quantization</td><td class="num">994,656 bytes</td></tr>
+    <tr><td>Compression vs f32 dense</td><td class="num">402×</td></tr>
+  </tbody>
+</table>
+</div>
+<p>
+  The forward pass multiplies by the factors, so the <em>logical</em> shape is 100M while the
+  number of independent stored weights is about 1M. This is why the file is under 1 MB. It is
+  not a 100M-parameter dense model; it is a low-rank model of that shape.
+</p>
+
+<h2>DenseLM</h2>
+<p>
+  DenseLM materializes the factors into full matrices and keeps every weight. The shipped
+  configuration is:
+</p>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Field</th><th class="num">Value</th></tr></thead>
+  <tbody>
+    <tr><td>Vocabulary</td><td class="num">62</td></tr>
+    <tr><td>Context</td><td class="num">64</td></tr>
+    <tr><td>Embedding width</td><td class="num">128</td></tr>
+    <tr><td>Hidden width</td><td class="num">10,902</td></tr>
+    <tr><td>Embedding weights</td><td class="num">7,936</td></tr>
+    <tr><td><code>fc1</code> weights</td><td class="num">89,309,184</td></tr>
+    <tr><td><code>fc2</code> weights</td><td class="num">675,924</td></tr>
+    <tr><td>Biases</td><td class="num">10,964</td></tr>
+    <tr><td><strong>Total parameters</strong></td><td class="num"><strong>90,004,008</strong></td></tr>
+    <tr><td><strong>4-bit file</strong></td><td class="num"><strong>45,117,066 bytes</strong></td></tr>
+    <tr><td>f32 equivalent</td><td class="num">360.0 MB</td></tr>
+  </tbody>
+</table>
+</div>
+<pre><code>P = 62·128 + 64·128·10902 + 10902·62 + 10902 + 62
+  = 7,936 + 89,309,184 + 675,924 + 10,964
+  = 90,004,008</code></pre>
+
+<h2 id="size-math">Size math</h2>
+<p>Each dense matrix is stored as:</p>
+<pre><code>8-byte header (rows, cols)
+rows × 4-byte f32 row scale
+rows × ceil(cols / 2) packed 4-bit bytes</code></pre>
+<p>Biases are stored as a 4-byte length plus f32 values. The 32-byte file header records magic, version, vocabulary, embedding width, hidden width, context, and a reserved word.</p>
+<pre><code>header                 32 bytes
+embedding matrix        4,224 bytes
+fc1 matrix         44,687,368 bytes
+fc2 matrix            381,578 bytes
+fc1 bias               43,612 bytes
+fc2 bias                  252 bytes
+----------------------------------
+total              45,117,066 bytes</code></pre>
+<p>
+  At 4 bits per weight, the raw weights alone are about 45 MB; scales, headers, and f32 biases
+  add roughly 80 KB. For comparison:
+</p>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Precision</th><th class="num">90M weights</th><th class="num">100M weights</th><th class="num">100B weights</th></tr></thead>
+  <tbody>
+    <tr><td>f32</td><td class="num">360 MB</td><td class="num">400 MB</td><td class="num">400 GB</td></tr>
+    <tr><td>int8</td><td class="num">90 MB</td><td class="num">100 MB</td><td class="num">100 GB</td></tr>
+    <tr><td>4-bit</td><td class="num">45 MB</td><td class="num">50 MB</td><td class="num">50 GB</td></tr>
+    <tr><td>2-bit</td><td class="num">22.5 MB</td><td class="num">25 MB</td><td class="num">25 GB</td></tr>
+    <tr><td>1-bit</td><td class="num">11.25 MB</td><td class="num">12.5 MB</td><td class="num">12.5 GB</td></tr>
+  </tbody>
+</table>
+</div>
+<div class="callout danger">
+  <strong>100B under 100 MB is impossible</strong>
+  <p>
+    Even at one bit per weight, 100B parameters need about 12.5 GB, before scales, embeddings,
+    or runtime overhead. No quantization trick changes that information-theoretic floor. Nib
+    targets 90M weights at 4 bits, which genuinely fits under 50 MB.
+  </p>
+</div>
+
+<h2>4-bit quantization</h2>
+<p>Dense weights are quantized row by row after training:</p>
+<pre><code>scale = max_abs(row) / 7
+q     = round(weight / scale) clamped to -7..7
+store q as a signed 4-bit nibble, two values per byte</code></pre>
+<p>
+  One f32 scale per row preserves the dynamic range of each row without a per-weight scale.
+  Biases remain f32. Loading dequantizes to f32, so inference runs on normal matrices; the
+  4-bit format is a storage format, not a low-precision compute kernel.
+</p>
+
+<h2>Pruning: 100M → 90M</h2>
+<p>
+  A 100M dense model at 4 bits is 50,128,686 bytes, just over 50 MB. To land comfortably under
+  50 MB, the shipped model drops 1,212 hidden units:
+</p>
+<ul>
+  <li>Score every hidden unit by the L2 norm of its outgoing <code>fc2</code> row.</li>
+  <li>Keep the 10,902 highest-scoring units, restoring their original order.</li>
+  <li>Copy the corresponding <code>fc1</code> columns, <code>fc1</code> bias entries, and <code>fc2</code> rows.</li>
+  <li>Fine-tune the resulting sub-network on the same corpus.</li>
+</ul>
+<p>
+  The result is a direct sub-network with 90,004,008 independent weights. It is fully dense;
+  pruning only chooses which hidden units survive.
+</p>
+
+<h2>Training data</h2>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Item</th><th>Value</th></tr></thead>
+  <tbody>
+    <tr><td>Corpus</td><td>Tiny Shakespeare (public domain)</td></tr>
+    <tr><td>Source</td><td><a href="https://raw.githubusercontent.com/karpathy/char-rnn/master/data/tinyshakespeare/input.txt" rel="noopener">Karpathy char-rnn corpus</a></td></tr>
+    <tr><td>Bytes used in the shipped run</td><td>200,000 (first 200 KB)</td></tr>
+    <tr><td>Lines</td><td>7,554</td></tr>
+    <tr><td>Tokenizer</td><td>Character-level, 62 tokens</td></tr>
+    <tr><td>Task</td><td>Given 64 characters, predict the next character</td></tr>
+    <tr><td>Possible windows</td><td>199,936</td></tr>
+    <tr><td>Validation split</td><td>None in the shipped run</td></tr>
+  </tbody>
+</table>
+</div>
+<p>
+  The 62-token vocabulary contains newline, space, <code>!&amp;',-.:;?</code>, uppercase
+  letters, and lowercase letters. Everything is real text; no synthetic samples, no
+  pre-trained weights, and no external model artifacts are used.
+</p>
+<div class="callout warn">
+  <strong>Training loss, not validation accuracy</strong>
+  <p>
+    The numbers below are mean cross-entropy on training windows. There is no held-out split,
+    so they measure fit, not generalization. Treat generated samples as the practical quality
+    check.
+  </p>
+</div>
+
+<h2>Training pipeline</h2>
+<div class="steps">
+  <div class="step">
+    <div>
+      <h4>Stage 1 — train Turbo from random weights</h4>
+      <p>5 epochs, batch 32, SGD, lr 0.05, all 199,936 windows. Loss 2.3209 → 1.7765. Result: 994,656-byte <code>turbo.bin</code>.</p>
+    </div>
+  </div>
+  <div class="step">
+    <div>
+      <h4>Stage 2 — expand and fine-tune all 100M weights</h4>
+      <p>Materialize <code>W = U·V</code>, then 2 epochs × 20,000 windows, batch 128, SGD, lr 0.02. Loss 1.5755 → 1.5290. Result: 50,128,686-byte dense artifact.</p>
+    </div>
+  </div>
+  <div class="step">
+    <div>
+      <h4>Stage 3 — prune to 90M and fine-tune</h4>
+      <p>Keep 10,902 of 12,114 hidden units, then 3 epochs × 20,000 windows, batch 128, SGD, lr 0.01. Loss <strong>1.5311 → 1.5154</strong> (best epoch 1.5079). Result: 45,117,066-byte <code>nib.bin</code>.</p>
+    </div>
+  </div>
+  <div class="step">
+    <div>
+      <h4>Stage 4 — quantize and verify</h4>
+      <p>Save each row as 4-bit nibbles with an f32 scale, reload, and compare predictions. The file is hashed and served through the same API as Turbo.</p>
+    </div>
+  </div>
+</div>
+
+<h3>Reproduce the shipped model</h3>
+<pre><code>./get-data.ps1
+$bytes = [IO.File]::ReadAllBytes("shakespeare.txt")[0..199999]
+[IO.File]::WriteAllBytes("shakespeare-200k.txt", $bytes)
+
+nib turbo-train --input shakespeare-200k.txt --output turbo.bin \
+  --tokenizer tokenizer.json --target 100000000 --context 64 --embed 128 \
+  --rank 30 --epochs 5 --lr 0.05 --batch-size 32
+
+nib dense-build --turbo turbo.bin --output dense-100m.bin --tokenizer tokenizer.json
+
+nib dense-train --input shakespeare-200k.txt --output dense-100m.bin \
+  --tokenizer tokenizer.json --init-turbo turbo.bin \
+  --epochs 2 --max-samples 20000 --batch-size 128 --lr 0.02
+
+nib dense-train --input shakespeare-200k.txt --output nib.bin \
+  --tokenizer tokenizer.json --init-dense dense-100m.bin --hidden 10902 \
+  --epochs 3 --max-samples 20000 --batch-size 128 --lr 0.01</code></pre>
+<p>Results vary because the trainer does not fix a random seed.</p>
+
+<h2>Benchmarks</h2>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Workload</th><th>Result</th><th>Notes</th></tr></thead>
+  <tbody>
+    <tr><td>Release binary</td><td>3,041,792 bytes</td><td>GNU toolchain, LTO, stripped</td></tr>
+    <tr><td>Turbo 200 characters</td><td>0.15 s (150 ms)</td><td>HTTP request, CPU, single thread</td></tr>
+    <tr><td>Dense 20 characters</td><td>1.7 s</td><td>HTTP request, includes JSON and model lock</td></tr>
+    <tr><td>Dense training</td><td>~0.035 s/sample</td><td>Batch 128; batch 32 is about 3× slower</td></tr>
+    <tr><td>Dense RAM</td><td>~400 MB</td><td>f32 weights plus activations; allow 1 GB in containers</td></tr>
+    <tr><td>Turbo RAM</td><td>&lt; 20 MB</td><td>Compact factors</td></tr>
+  </tbody>
+</table>
+</div>
+<p>
+  Benchmarks are from one development laptop CPU. Dense generation cost scales with
+  <code>length</code>; 120 characters took about 11 seconds in CLI sampling (~90 ms/char).
+  Turbo is the interactive choice; dense is the artifact for inspecting a real 90M-weight
+  model.
+</p>
+
+<h2>Prompt behavior</h2>
+<p>
+  Both generators use a fixed 64-character context. A short prompt is repeated to fill the
+  context instead of being padded with spaces, which keeps the input closer to real text. A
+  prompt longer than 64 characters is truncated from the left. Natural prompts of 64+
+  characters give the most coherent output.
+</p>
+
+<h2>Limitations</h2>
+<ul>
+  <li><strong>Character-level, not subword.</strong> No BPE tokenizer, no instruction tuning, no chat template.</li>
+  <li><strong>Small corpus.</strong> 200 KB of Shakespeare is enough for style and structure, not general knowledge.</li>
+  <li><strong>No validation split.</strong> Reported loss is training loss; overfitting is possible.</li>
+  <li><strong>Fixed 64-character context.</strong> Longer prompts are truncated, not attended to.</li>
+  <li><strong>Quantization after training.</strong> 4-bit storage is not trained with quantization-aware gradients.</li>
+  <li><strong>CPU only.</strong> No GPU kernels, no SIMD intrinsics beyond what the compiler emits, no batched inference server.</li>
+  <li><strong>Not a foundation model.</strong> Do not compare it to pretrained LLMs; it is a from-scratch educational and embeddable model.</li>
+</ul>
+
+<h2>Frequently asked model questions</h2>
+<details>
+  <summary>Is the shipped model really trained from scratch?</summary>
+  <p>Yes. Turbo starts from Xavier-random factors and learns from the Shakespeare file. Dense is expanded from that project's own Turbo factors, then fine-tuned with dense gradients. No external checkpoint is loaded.</p>
+</details>
+<details>
+  <summary>Why is the dense file 45 MB rather than 90 MB?</summary>
+  <p>Weights are stored at 4 bits each. 90M × 0.5 bytes is about 45 MB; row scales and biases add about 80 KB.</p>
+</details>
+<details>
+  <summary>Why not keep 100M parameters?</summary>
+  <p>A 100M dense model at 4 bits is 50,128,686 bytes, slightly over 50 MB. Pruning 1,212 hidden units lands at 45.12 MB while keeping the model fully dense. The 100M configuration is still available through <code>dense-build</code>.</p>
+</details>
+<details>
+  <summary>Can it run on a GPU?</summary>
+  <p>Not currently. The implementation uses <code>ndarray</code> on the CPU. GPU support would require a new backend and is outside the current scope.</p>
+</details>
+<details>
+  <summary>Can I train on my own text?</summary>
+  <p>Yes. Point <code>--input</code> at any UTF-8 text file and use a matching tokenizer path. A larger, cleaner corpus improves quality more than adding epochs.</p>
+</details>
+
+      <footer class="footer">
+        <div class="footer-row">
+          <span><strong>nib-rs</strong> 0.1.0</span>
+          <span class="dotsep">·</span>
+          <span>Apache-2.0</span>
+          <span class="dotsep">·</span>
+          <a href="https://github.com/Vamshavardhan50/nib-ai" rel="noopener">GitHub</a>
+          <span class="dotsep">·</span>
+          <a href="https://github.com/Vamshavardhan50/nib-ai/issues" rel="noopener">Issues</a>
+          <span class="dotsep">·</span>
+          <a href="index.html">Docs home</a>
+        </div>
+        <p class="small muted">Built from scratch in Rust. No pre-trained weights, no external model files.</p>
+      </footer>
+    </article>
+  </main>
+</div>
+
+<script src="docs.js" defer></script>
+</body>
+</html>

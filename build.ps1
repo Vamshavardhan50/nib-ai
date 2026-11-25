@@ -1,4 +1,4 @@
-# Build script for cactus-rs
+# Build script for nib-rs
 # Uses the GNU toolchain + MinGW (no Visual Studio required).
 #
 # Usage:  .\build.ps1          (debug build)
@@ -32,7 +32,7 @@ if ($Test) {
 if ($Release) {
     & $cargo $toolchain build --release
     if ($LASTEXITCODE -eq 0) {
-        $bin = "target\release\cactus.exe"
+        $bin = "target\release\nib.exe"
         $size = (Get-Item $bin).Length
         Write-Host ""
         Write-Host "Built $bin  ($([math]::Round($size / 1MB, 2)) MB)" -ForegroundColor Green
@@ -41,7 +41,7 @@ if ($Release) {
     & $cargo $toolchain build
     if ($LASTEXITCODE -eq 0) {
         Write-Host ""
-        Write-Host "Built target\debug\cactus.exe" -ForegroundColor Green
+        Write-Host "Built target\debug\nib.exe" -ForegroundColor Green
     }
 }
 exit $LASTEXITCODE

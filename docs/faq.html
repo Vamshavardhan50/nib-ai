@@ -1,0 +1,370 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FAQ · nib-rs docs</title>
+<meta name="description" content="Frequently asked questions about nib-rs: naming, from-scratch training, model size, 100B impossibility, data, quality, performance, API, hosting, licensing, and limitations.">
+<meta name="theme-color" content="#0f766e">
+<link rel="canonical" href="https://vamshavardhan50.github.io/nib-ai/docs/faq.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="nib-rs docs">
+<meta property="og:title" content="FAQ · nib-rs docs">
+<meta property="og:description" content="Frequently asked questions about nib-rs: naming, from-scratch training, model size, 100B impossibility, data, quality, performance, API, hosting, licensing, and limitations.">
+<meta property="og:url" content="https://vamshavardhan50.github.io/nib-ai/docs/faq.html">
+<meta name="twitter:card" content="summary">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230f766e'/%3E%3Ctext x='16' y='23' font-family='monospace' font-size='20' font-weight='bold' fill='%23e8fdf5' text-anchor='middle'%3En%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+<script>
+  try {
+    var saved = localStorage.getItem("nib-docs-theme");
+    if (saved === "light" || saved === "dark") document.documentElement.dataset.theme = saved;
+  } catch (e) {}
+</script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="topbar">
+  <a class="brand" href="index.html" aria-label="nib-rs documentation home">
+    <svg class="brand-mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M12 19l7-7 3 3-7 7-3-3z"></path>
+      <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"></path>
+      <path d="M2 2l7.586 7.586"></path>
+      <circle cx="11" cy="11" r="2"></circle>
+    </svg>
+    <span class="brand-name">nib<span class="brand-suffix">-rs</span></span>
+    <span class="brand-tag">docs</span>
+  </a>
+  <div class="topbar-actions">
+    <a class="pill" href="../index.html" title="Open the browser UI">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="14" rx="2"></rect><path d="M8 21h8M12 18v3"></path></svg>
+      <span class="label">Live UI</span>
+    </a>
+    <a class="pill" href="https://github.com/Vamshavardhan50/nib-ai" rel="noopener" title="GitHub repository">
+      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5a11.5 11.5 0 0 0-3.64 22.42c.58.1.79-.25.79-.56v-2.17c-3.22.7-3.9-1.37-3.9-1.37-.53-1.34-1.29-1.7-1.29-1.7-1.05-.72.08-.71.08-.71 1.16.08 1.77 1.2 1.77 1.2 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.57-.29-5.27-1.28-5.27-5.7 0-1.26.45-2.29 1.19-3.1-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11 11 0 0 1 5.8 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.12 3.05.74.81 1.18 1.84 1.18 3.1 0 4.43-2.7 5.4-5.28 5.69.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.56A11.5 11.5 0 0 0 12 .5z"></path></svg>
+      <span class="label">GitHub</span>
+    </a>
+    <button class="icon-btn" id="themeToggle" type="button" aria-label="Toggle theme">☾</button>
+    <button class="icon-btn" id="menuToggle" type="button" aria-label="Open navigation" aria-expanded="false" aria-controls="sidebar">☰</button>
+  </div>
+</header>
+
+<div class="shell">
+  <aside class="sidebar" id="sidebar">
+    <nav aria-label="Documentation">
+      <p class="nav-label">Documentation</p>
+      <a href="index.html">Overview</a>
+        <a href="getting-started.html">Getting started</a>
+        <a href="use-cases.html">What you can do</a>
+        <a href="cli.html">CLI reference</a>
+        <a href="http-api.html">HTTP API</a>
+        <a href="rust-api.html">Rust API</a>
+        <a href="models.html">Models &amp; training</a>
+        <a href="deployment.html">Deployment</a>
+        <a href="faq.html">FAQ</a>
+    </nav>
+    <div class="toc" id="toc" aria-label="On this page"></div>
+    <div class="sidebar-card">
+      <span class="k">Shipped dense model</span>
+      <span class="v">90,004,008 weights</span>
+      <small>45,117,066 bytes · 4-bit · v0.1.0</small>
+    </div>
+  </aside>
+
+  <main id="main">
+    <article>
+      <div class="crumbs"><a href="index.html">Docs</a> <span>/</span> <span>FAQ</span></div>
+      
+<section class="hero">
+  <p class="eyebrow">Answers</p>
+  <h1>Frequently asked questions</h1>
+  <p class="lead">
+    Direct answers about what Nib is, what it is not, how the sizes work, and why the model
+    behaves the way it does.
+  </p>
+</section>
+
+<h2>Project and naming</h2>
+
+<h3>What is Nib?</h3>
+<p>
+  Nib (<code>nib-rs</code>) is a from-scratch Rust implementation of character-level language
+  models and a small vision CNN. It includes training, quantization, a CLI, a Rust library, a
+  zero-dependency HTTP API, and a browser UI. The shipped dense artifact has 90,004,008
+  independent weights in 45,117,066 bytes.
+</p>
+
+<h3>Why the name “Nib”?</h3>
+<p>
+  A nib is the writing tip of a pen: small, precise, and the part that actually touches the
+  page. It fits a project about compact models and generated text. The package is
+  <code>nib-rs</code>, the binary is <code>nib</code>, and the library is <code>nib_rs</code>.
+</p>
+
+<h3>Is this the official Cactus project?</h3>
+<p>
+  No. Nib is an independent implementation inspired by the goals of small, embeddable language
+  models. References to Cactus or its Needle model in the README are context, not affiliation.
+  All code and weights here are produced by this repository.
+</p>
+
+<h3>Did the project get renamed?</h3>
+<p>
+  Yes. Earlier development used the name <code>cactus-rs</code>. The current name is Nib, and
+  all package names, commands, UI titles, docs, and artifacts use it. The new repository is
+  <a href="https://github.com/Vamshavardhan50/nib-ai" rel="noopener">Vamshavardhan50/nib-ai</a>.
+</p>
+
+<h2>From scratch and data</h2>
+
+<h3>Is it really trained from scratch?</h3>
+<p>
+  Yes. TurboLM starts from Xavier-random low-rank factors and trains on real text with
+  hand-written forward and backward passes. DenseLM is expanded from this project's own Turbo
+  factors, then fine-tuned with dense gradients. No external checkpoint, GGUF, or pretrained
+  weight file is loaded.
+</p>
+
+<h3>What data was used?</h3>
+<p>
+  The first 200,000 bytes of <a href="https://raw.githubusercontent.com/karpathy/char-rnn/master/data/tinyshakespeare/input.txt" rel="noopener">Tiny Shakespeare</a>,
+  a public-domain corpus of Shakespeare plays and poems. That is 7,554 lines and a 62-character
+  vocabulary. The full corpus is about 1.1 MB; the shipped run used a 200 KB prefix so CPU
+  training stayed practical.
+</p>
+
+<h3>Is the data mock or synthetic?</h3>
+<p>
+  No. It is real public-domain text downloaded over HTTPS by <code>get-data.ps1</code>. The
+  training windows are slices of that text; no labels or samples are fabricated.
+</p>
+
+<h3>Is there a validation split?</h3>
+<p>
+  Not in the shipped run. Reported losses are training cross-entropy. Adding a held-out split
+  is a good next step; the trainer already accepts arbitrary windows, so it is a small change
+  to evaluate on a disjoint slice.
+</p>
+
+<h3>How long does training take?</h3>
+<p>
+  On the development laptop CPU, dense fine-tuning runs at roughly 0.035 seconds per sample at
+  batch 128, about 12 minutes per 20,000-window epoch. Three epochs is roughly 35–40 minutes.
+  Turbo training is much faster; CharLM is seconds to minutes depending on size.
+</p>
+
+<h2>Model size and the 100B question</h2>
+
+<h3>Why does the dense model have 90M parameters instead of 100M?</h3>
+<p>
+  A 100M dense model at 4 bits is 50,128,686 bytes, slightly over 50 MB. Pruning 1,212 hidden
+  units produces 90,004,008 parameters and a 45,117,066-byte file, comfortably under 50 MB. The
+  100M configuration is still available with <code>dense-build</code> or <code>dense-train</code>.
+</p>
+
+<h3>Can 100B parameters fit under 100 MB?</h3>
+<p>
+  No. 100B weights at 1 bit per weight need about 12.5 GB. At 4 bits they need about 50 GB; at
+  int8 about 100 GB; at f32 about 400 GB. This is an information-theoretic floor, not an
+  implementation limitation. No compression scheme can put 100B independent weights in 100 MB.
+</p>
+
+<h3>How does Turbo fit a 100M shape in under 1 MB?</h3>
+<p>
+  Turbo stores each large matrix as two thin factors, <code>U·V</code>, with rank 30. The
+  logical dense shape is 100,009,068 parameters, but only 994,572 independent values are
+  stored. It is a low-rank model of that shape, not a dense 100M-weight model. DenseLM is the
+  artifact with 90M independent weights.
+</p>
+
+<h3>Is the 4-bit file still a “real” 90M model?</h3>
+<p>
+  Yes. Every one of the 90,004,008 weights exists as a signed 4-bit value plus one f32 scale per
+  row. Loading dequantizes them into f32 matrices. The storage is compressed; the network is
+  dense.
+</p>
+
+<h3>What does 4-bit quantization cost in quality?</h3>
+<p>
+  There is some loss because each row shares one scale and weights are rounded to 15 levels.
+  The project quantizes after training, then reloads the artifact and checks predictions in
+  tests. Fine-tuning before quantization keeps the loss small, but this is not
+  quantization-aware training.
+</p>
+
+<h2>Quality and behavior</h2>
+
+<h3>Why is the generated text sometimes garbled?</h3>
+<p>
+  The model is a 90M-parameter character-level MLP trained on 200 KB of Shakespeare. It learns
+  spelling, speaker labels, line breaks, and local style, not general language understanding.
+  Short prompts are repeated to fill the 64-character context; longer natural prompts produce
+  better output. Temperature also matters: very high values increase noise.
+</p>
+
+<h3>Can it answer questions or follow instructions?</h3>
+<p>
+  No. It is not instruction-tuned and has no chat template. It continues text in the style of
+  its corpus. Asking “What is the capital of France?” is outside its training objective.
+</p>
+
+<h3>Why character-level instead of BPE?</h3>
+<p>
+  Character-level tokenization is simple, deterministic, and has a tiny vocabulary (62 tokens
+  here). It makes the whole pipeline readable and keeps the embedding table small. A BPE
+  tokenizer would improve long-range efficiency but add substantial complexity.
+</p>
+
+<h3>Why an MLP instead of a transformer?</h3>
+<p>
+  The goal is a small, fast, from-scratch CPU model with a fully understandable training loop.
+  A fixed-context MLP is much simpler than attention and still learns local character patterns.
+  Transformers are a possible future direction, not a current feature.
+</p>
+
+<h3>Can I train on my own text?</h3>
+<p>
+  Yes. Point <code>--input</code> at any UTF-8 text file. Use a matching tokenizer path; the
+  tokenizer is built from the corpus for CharLM and Turbo. More clean data usually helps more
+  than more epochs.
+</p>
+
+<h3>Can I use the full 1.1 MB Shakespeare corpus?</h3>
+<p>
+  Yes. Run <code>get-data.ps1</code> and train on the full file. Expect longer training and
+  somewhat better coverage. The shipped 200 KB prefix was a deliberate speed/quality tradeoff.
+</p>
+
+<h2>Performance</h2>
+
+<h3>Why is dense generation slow?</h3>
+<p>
+  Every generated character runs a forward pass through 90M weights on the CPU: about 89M
+  multiply-adds in <code>fc1</code> alone. A 20-character HTTP request takes about 1.7 seconds;
+  120 characters take about 11 seconds. Turbo is roughly two orders of magnitude cheaper per
+  character.
+</p>
+
+<h3>How fast is Turbo?</h3>
+<p>
+  Turbo 200-character generation takes <strong>0.15 s (150 ms)</strong> on the development CPU.
+  It is the right choice for an interactive demo.
+</p>
+
+<h3>How much RAM does it need?</h3>
+<p>
+  Dense loads 90M f32 weights, about 360 MB, plus activations and runtime overhead; allow about
+  400 MB and use a 1 GB container limit. Turbo stays under about 20 MB. Training needs more
+  than inference because it keeps gradients and intermediate matrices.
+</p>
+
+<h3>Can it use a GPU?</h3>
+<p>
+  Not currently. The implementation uses <code>ndarray</code> on the CPU. GPU support would
+  require a new backend, kernels, and memory management; it is outside the current scope.
+</p>
+
+<h2>API and deployment</h2>
+
+<h3>Does <code>serve</code> work with both models?</h3>
+<p>
+  Yes. It reads the first eight bytes and dispatches to the Turbo int8 or dense int4 loader.
+  The HTTP endpoints, UI, CORS behavior, and response schema are identical.
+</p>
+
+<h3>Can I host everything on GitHub Pages?</h3>
+<p>
+  You can host the UI and this documentation site on Pages. Pages cannot execute Rust, so the
+  API must run on a VPS, Docker host, Render, Railway, Fly.io, Cloud Run, or similar. Point the
+  static UI at the API with <code>?api=https://your-api-host</code>.
+</p>
+
+<h3>Is there authentication or TLS?</h3>
+<p>
+  Not in the built-in server. Put it behind Caddy, nginx, a cloud load balancer, or a platform
+  gateway for TLS, auth, rate limiting, and logging. CORS is intentionally open (<code>*</code>)
+  so static demos can call the API.
+</p>
+
+<h3>Can I stream tokens?</h3>
+<p>
+  No. <code>/api/generate</code> returns the full text in one JSON response after generation
+  completes. Streaming would require a different response format and incremental decoding.
+</p>
+
+<h3>Can I embed the UI on my website?</h3>
+<p>
+  Yes. Run <code>nib web-export</code>, host the HTML anywhere, and embed it with an iframe
+  whose <code>src</code> includes <code>?api=https://your-api-host</code>. The UI also shows a
+  ready-made snippet.
+</p>
+
+<h3>Does it work offline?</h3>
+<p>
+  Yes. The binary, model, tokenizer, and UI have no runtime network dependencies. Only the
+  optional data downloader needs the internet.
+</p>
+
+<h2>Licensing and contributing</h2>
+
+<h3>What license is the code under?</h3>
+<p>
+  Apache-2.0. You can use, modify, and distribute it, including commercially, provided you
+  keep the license and notices. The Shakespeare corpus is public domain.
+</p>
+
+<h3>Can I use the trained weights commercially?</h3>
+<p>
+  The weights are generated by this project from public-domain text. Apache-2.0 covers the
+  code; treat the weights as your own artifacts. As always, verify that your own training data
+  and use case comply with applicable law and licenses.
+</p>
+
+<h3>How can I contribute?</h3>
+<p>
+  Open an issue or pull request on <a href="https://github.com/Vamshavardhan50/nib-ai" rel="noopener">GitHub</a>. Run
+  <code>cargo test</code> before sending changes. Useful directions include a validation split,
+  larger corpora, a BPE tokenizer, SIMD kernels, streaming responses, and deployment examples.
+</p>
+
+<h3>Why is the binary about 3 MB?</h3>
+<p>
+  It includes Rust's standard library, <code>ndarray</code>, serde, clap, and the image decoder,
+  with LTO, one codegen unit, abort-on-panic, and symbol stripping. That is small for a complete
+  trainer, server, and image pipeline, but not a microcontroller binary.
+</p>
+
+<h2>Known limitations</h2>
+<ul>
+  <li>No validation split or held-out benchmark in the shipped run.</li>
+  <li>Character-level only; no BPE or subword tokenizer.</li>
+  <li>Fixed 64-character context; no attention or long-range memory.</li>
+  <li>CPU-only, single-threaded generation, no batching.</li>
+  <li>No streaming, authentication, TLS, or rate limiting in the server.</li>
+  <li>4-bit quantization happens after training, not during it.</li>
+  <li>The model is a small Shakespeare-style character model, not a general assistant.</li>
+  <li>Training does not fix a random seed, so reproduced runs differ slightly.</li>
+</ul>
+
+      <footer class="footer">
+        <div class="footer-row">
+          <span><strong>nib-rs</strong> 0.1.0</span>
+          <span class="dotsep">·</span>
+          <span>Apache-2.0</span>
+          <span class="dotsep">·</span>
+          <a href="https://github.com/Vamshavardhan50/nib-ai" rel="noopener">GitHub</a>
+          <span class="dotsep">·</span>
+          <a href="https://github.com/Vamshavardhan50/nib-ai/issues" rel="noopener">Issues</a>
+          <span class="dotsep">·</span>
+          <a href="index.html">Docs home</a>
+        </div>
+        <p class="small muted">Built from scratch in Rust. No pre-trained weights, no external model files.</p>
+      </footer>
+    </article>
+  </main>
+</div>
+
+<script src="docs.js" defer></script>
+</body>
+</html>

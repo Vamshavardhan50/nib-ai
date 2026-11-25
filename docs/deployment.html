@@ -1,0 +1,324 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Deployment · nib-rs docs</title>
+<meta name="description" content="Deploy nib-rs with Docker, a VPS and systemd, GitHub Pages, Netlify, Vercel, Cloudflare Pages, Render, Railway, Fly.io, or Google Cloud Run.">
+<meta name="theme-color" content="#0f766e">
+<link rel="canonical" href="https://vamshavardhan50.github.io/nib-ai/docs/deployment.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="nib-rs docs">
+<meta property="og:title" content="Deployment · nib-rs docs">
+<meta property="og:description" content="Deploy nib-rs with Docker, a VPS and systemd, GitHub Pages, Netlify, Vercel, Cloudflare Pages, Render, Railway, Fly.io, or Google Cloud Run.">
+<meta property="og:url" content="https://vamshavardhan50.github.io/nib-ai/docs/deployment.html">
+<meta name="twitter:card" content="summary">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230f766e'/%3E%3Ctext x='16' y='23' font-family='monospace' font-size='20' font-weight='bold' fill='%23e8fdf5' text-anchor='middle'%3En%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+<script>
+  try {
+    var saved = localStorage.getItem("nib-docs-theme");
+    if (saved === "light" || saved === "dark") document.documentElement.dataset.theme = saved;
+  } catch (e) {}
+</script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="topbar">
+  <a class="brand" href="index.html" aria-label="nib-rs documentation home">
+    <svg class="brand-mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M12 19l7-7 3 3-7 7-3-3z"></path>
+      <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"></path>
+      <path d="M2 2l7.586 7.586"></path>
+      <circle cx="11" cy="11" r="2"></circle>
+    </svg>
+    <span class="brand-name">nib<span class="brand-suffix">-rs</span></span>
+    <span class="brand-tag">docs</span>
+  </a>
+  <div class="topbar-actions">
+    <a class="pill" href="../index.html" title="Open the browser UI">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="14" rx="2"></rect><path d="M8 21h8M12 18v3"></path></svg>
+      <span class="label">Live UI</span>
+    </a>
+    <a class="pill" href="https://github.com/Vamshavardhan50/nib-ai" rel="noopener" title="GitHub repository">
+      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5a11.5 11.5 0 0 0-3.64 22.42c.58.1.79-.25.79-.56v-2.17c-3.22.7-3.9-1.37-3.9-1.37-.53-1.34-1.29-1.7-1.29-1.7-1.05-.72.08-.71.08-.71 1.16.08 1.77 1.2 1.77 1.2 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.57-.29-5.27-1.28-5.27-5.7 0-1.26.45-2.29 1.19-3.1-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11 11 0 0 1 5.8 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.12 3.05.74.81 1.18 1.84 1.18 3.1 0 4.43-2.7 5.4-5.28 5.69.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.56A11.5 11.5 0 0 0 12 .5z"></path></svg>
+      <span class="label">GitHub</span>
+    </a>
+    <button class="icon-btn" id="themeToggle" type="button" aria-label="Toggle theme">☾</button>
+    <button class="icon-btn" id="menuToggle" type="button" aria-label="Open navigation" aria-expanded="false" aria-controls="sidebar">☰</button>
+  </div>
+</header>
+
+<div class="shell">
+  <aside class="sidebar" id="sidebar">
+    <nav aria-label="Documentation">
+      <p class="nav-label">Documentation</p>
+      <a href="index.html">Overview</a>
+        <a href="getting-started.html">Getting started</a>
+        <a href="use-cases.html">What you can do</a>
+        <a href="cli.html">CLI reference</a>
+        <a href="http-api.html">HTTP API</a>
+        <a href="rust-api.html">Rust API</a>
+        <a href="models.html">Models &amp; training</a>
+        <a href="deployment.html">Deployment</a>
+        <a href="faq.html">FAQ</a>
+    </nav>
+    <div class="toc" id="toc" aria-label="On this page"></div>
+    <div class="sidebar-card">
+      <span class="k">Shipped dense model</span>
+      <span class="v">90,004,008 weights</span>
+      <small>45,117,066 bytes · 4-bit · v0.1.0</small>
+    </div>
+  </aside>
+
+  <main id="main">
+    <article>
+      <div class="crumbs"><a href="index.html">Docs</a> <span>/</span> <span>Deployment</span></div>
+      
+<section class="hero">
+  <p class="eyebrow">Operations</p>
+  <h1>Deployment</h1>
+  <p class="lead">
+    Nib ships as one static binary plus a model file and a tokenizer. The API needs a host that
+    can execute binaries; the UI can live on any static host. This page covers the common paths.
+  </p>
+</section>
+
+<h2>What runs where</h2>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Piece</th><th>Needs</th><th>Good hosts</th></tr></thead>
+  <tbody>
+    <tr><td>Rust API + embedded UI</td><td>Linux/Windows/macOS process, 1 GB RAM for dense</td><td>VPS, Docker, Render, Railway, Fly.io, Cloud Run</td></tr>
+    <tr><td>Static UI (<code>index.html</code>)</td><td>Static file hosting only</td><td>GitHub Pages, Netlify, Vercel, Cloudflare Pages</td></tr>
+    <tr><td>Documentation site (<code>docs/</code>)</td><td>Static file hosting only</td><td>GitHub Pages, Netlify, Vercel, Cloudflare Pages</td></tr>
+    <tr><td>Model files</td><td>45 MB dense or 1 MB Turbo</td><td>Baked into the image or downloaded at startup</td></tr>
+  </tbody>
+</table>
+</div>
+<div class="callout">
+  <strong>GitHub Pages cannot run Rust</strong>
+  <p>
+    Pages serves HTML, CSS, and JavaScript only. Host <code>index.html</code> and this docs site
+    on Pages, but run <code>nib serve</code> on a separate host. Point the UI at it with
+    <code>?api=https://your-api-host</code>.
+  </p>
+</div>
+
+<h2>Build once</h2>
+<pre><code>cargo build --release
+# binary: target/release/nib
+# model:  nib.bin (45.12 MB) or turbo.bin (994,656 bytes)
+# vocab:  tokenizer.json</code></pre>
+<p>Copy those three files to the host and run:</p>
+<pre><code>./nib serve --model nib.bin --tokenizer tokenizer.json --host 0.0.0.0 --port 8080</code></pre>
+
+<h2>Docker</h2>
+<p>The included multi-stage Dockerfile builds the release binary and copies a model into a slim Debian runtime.</p>
+<pre><code># Fast, compact demo (default)
+docker build -t nib-turbo .
+docker run --rm -p 8080:8080 nib-turbo
+
+# Real 90M dense model
+docker build --build-arg MODEL=nib.bin -t nib-dense .
+docker run --rm -p 8080:8080 --memory=1g nib-dense</code></pre>
+<p>The image exposes port 8080, runs as an unprivileged user, and reads <code>HOST</code> and <code>PORT</code> environment variables.</p>
+<h3>Docker Compose</h3>
+<pre><code>services:
+  nib:
+    build:
+      context: .
+      args:
+        MODEL: nib.bin
+    ports:
+      - "8080:8080"
+    environment:
+      HOST: 0.0.0.0
+      PORT: 8080
+    mem_limit: 1g
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3</code></pre>
+<p class="muted small">The runtime image does not include <code>curl</code> by default. Add it to the Dockerfile or use a TCP check if you rely on Docker healthchecks.</p>
+
+<h2>GitHub Pages</h2>
+<p>The repository is <a href="https://github.com/Vamshavardhan50/nib-ai" rel="noopener">Vamshavardhan50/nib-ai</a>. The root <code>index.html</code> is the browser UI; <code>docs/index.html</code> is this documentation site.</p>
+<div class="steps">
+  <div class="step">
+    <div>
+      <h4>Push the repository</h4>
+      <pre><code>git remote add origin https://github.com/Vamshavardhan50/nib-ai.git
+git branch -M main
+git push -u origin main</code></pre>
+    </div>
+  </div>
+  <div class="step">
+    <div>
+      <h4>Enable Pages</h4>
+      <p>Repository → Settings → Pages → Build and deployment → Source: <strong>Deploy from a branch</strong> → Branch: <strong>main</strong> → Folder: <strong>/ (root)</strong> → Save.</p>
+    </div>
+  </div>
+  <div class="step">
+    <div>
+      <h4>Open the UI and docs</h4>
+      <pre><code>https://vamshavardhan50.github.io/nib-ai/
+https://vamshavardhan50.github.io/nib-ai/docs/</code></pre>
+    </div>
+  </div>
+  <div class="step">
+    <div>
+      <h4>Connect the API</h4>
+      <pre><code>https://vamshavardhan50.github.io/nib-ai/?api=https://your-api-host</code></pre>
+      <p>The UI saves the endpoint and includes it in the embed snippet.</p>
+    </div>
+  </div>
+</div>
+<p>
+  If you prefer GitHub Actions, use the official Pages actions (<code>actions/configure-pages</code>,
+  <code>actions/upload-pages-artifact</code>, <code>actions/deploy-pages</code>) and publish the
+  repository root or a generated <code>_site/</code> directory. The docs site is plain HTML and
+  needs no build step; <code>docs/build.mjs</code> only regenerates the pages from one layout.
+</p>
+
+<h2>Other static hosts</h2>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Host</th><th>Setup</th></tr></thead>
+  <tbody>
+    <tr><td>Netlify</td><td>Drag the repository root or connect Git; publish directory <code>/</code>. No build command.</td></tr>
+    <tr><td>Vercel</td><td>Import the repo as a static project; output directory <code>/</code>.</td></tr>
+    <tr><td>Cloudflare Pages</td><td>Connect Git; framework preset “None”; build command empty; output directory <code>/</code>.</td></tr>
+    <tr><td>S3 / CloudFront</td><td>Upload <code>index.html</code>, <code>docs/</code>, and assets; set <code>index.html</code> as the index document.</td></tr>
+  </tbody>
+</table>
+</div>
+<p>For all of them, set the API base with <code>?api=</code>; the UI is a single HTML file with inline CSS and JavaScript.</p>
+
+<h2>VPS with systemd</h2>
+<pre><code># /etc/systemd/system/nib.service
+[Unit]
+Description=nib-rs language model API
+After=network.target
+
+[Service]
+Type=simple
+User=nib
+WorkingDirectory=/opt/nib
+ExecStart=/opt/nib/nib serve --model /opt/nib/nib.bin --tokenizer /opt/nib/tokenizer.json --host 127.0.0.1 --port 8080
+Restart=on-failure
+RestartSec=3
+MemoryMax=1G
+
+[Install]
+WantedBy=multi-user.target</code></pre>
+<pre><code>sudo systemctl daemon-reload
+sudo systemctl enable --now nib
+curl http://127.0.0.1:8080/health</code></pre>
+
+<h3>Caddy reverse proxy</h3>
+<pre><code>api.example.com {
+    reverse_proxy 127.0.0.1:8080 {
+        transport http {
+            read_timeout 300s
+            write_timeout 300s
+        }
+    }
+}</code></pre>
+<h3>nginx reverse proxy</h3>
+<pre><code>server {
+    listen 443 ssl;
+    server_name api.example.com;
+
+    location / {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_read_timeout 300s;
+        proxy_send_timeout 300s;
+        proxy_set_header Host $host;
+    }
+}</code></pre>
+
+<h2>Render, Railway, Fly.io, Cloud Run</h2>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Platform</th><th>Key settings</th></tr></thead>
+  <tbody>
+    <tr><td>Render</td><td>Web Service → Docker → health check path <code>/health</code> → 1 GB RAM for dense → set <code>PORT</code> if required by the platform.</td></tr>
+    <tr><td>Railway</td><td>Deploy from the repo; Railway injects <code>PORT</code>; the Dockerfile CMD expands <code>HOST</code> and <code>PORT</code>.</td></tr>
+    <tr><td>Fly.io</td><td><code>fly launch</code>, internal port 8080, <code>fly scale memory 1024</code>, health check <code>/health</code>.</td></tr>
+    <tr><td>Google Cloud Run</td><td>Container port 8080, memory 1 GiB, request timeout 300 s, concurrency 1 (generation is serialized).</td></tr>
+  </tbody>
+</table>
+</div>
+<p>
+  Dense generation can exceed default platform timeouts. Prefer Turbo for request/response
+  services, or raise the timeout and cap <code>length</code> in your client.
+</p>
+
+<h2>Security</h2>
+<ul>
+  <li><strong>No built-in auth, TLS, or rate limiting.</strong> Put Nib behind a reverse proxy or platform gateway.</li>
+  <li><strong>CORS is <code>*</code>.</strong> Any website can call a public instance. Restrict at the proxy or fork the header logic if the model is private.</li>
+  <li><strong>Limit request size and rate.</strong> The server caps bodies at 64 KB and prompts at 4,096 characters, but it does not rate-limit clients.</li>
+  <li><strong>Treat model files as trusted input.</strong> The loaders validate magic and dimensions, but they are not a sandbox for hostile files.</li>
+  <li><strong>Run as an unprivileged user</strong> (the Dockerfile does) and keep the runtime image minimal.</li>
+</ul>
+
+<h2>CI</h2>
+<pre><code>name: ci
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo test --release
+      - run: cargo build --release</code></pre>
+<p>The test suite uses tiny in-memory models, so CI does not need <code>nib.bin</code> or a network download.</p>
+
+<h2>Repository size</h2>
+<ul>
+  <li><code>nib.bin</code> is <strong>45,117,066 bytes</strong>, under GitHub's 100 MB per-file limit. Normal Git works.</li>
+  <li>Each dense variant adds about 45 MB to history. Keep one shipped artifact; publish experiments as release assets.</li>
+  <li><code>turbo.bin</code> is under 1 MB and is cheap to keep.</li>
+  <li>For files over 100 MB, use Git LFS or GitHub Releases. Do not rewrite history just to remove one model unless the size is a real problem.</li>
+</ul>
+
+<h2>Deployment checklist</h2>
+<ul class="checklist">
+  <li>Release binary built and tested on the target platform.</li>
+  <li><code>nib.bin</code> or <code>turbo.bin</code> plus matching <code>tokenizer.json</code> copied.</li>
+  <li><code>/health</code> returns <code>{"status":"ok"}</code>.</li>
+  <li><code>/api/info</code> reports the expected model name, parameters, and file bytes.</li>
+  <li>Reverse proxy timeout at least 300 seconds for dense generation.</li>
+  <li>Memory limit at least 1 GB for dense, 128 MB for Turbo.</li>
+  <li>Static UI configured with <code>?api=https://your-api-host</code>.</li>
+  <li>Authentication and rate limiting added at the proxy if the instance is public.</li>
+</ul>
+
+      <footer class="footer">
+        <div class="footer-row">
+          <span><strong>nib-rs</strong> 0.1.0</span>
+          <span class="dotsep">·</span>
+          <span>Apache-2.0</span>
+          <span class="dotsep">·</span>
+          <a href="https://github.com/Vamshavardhan50/nib-ai" rel="noopener">GitHub</a>
+          <span class="dotsep">·</span>
+          <a href="https://github.com/Vamshavardhan50/nib-ai/issues" rel="noopener">Issues</a>
+          <span class="dotsep">·</span>
+          <a href="index.html">Docs home</a>
+        </div>
+        <p class="small muted">Built from scratch in Rust. No pre-trained weights, no external model files.</p>
+      </footer>
+    </article>
+  </main>
+</div>
+
+<script src="docs.js" defer></script>
+</body>
+</html>

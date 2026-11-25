@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>What you can do · nib-rs docs</title>
+<meta name="description" content="Concrete things nib-rs can do today: continue text, train on your own corpus, build autocomplete, serve an API, embed a generator on any website, classify images, compress models, and teach how training works.">
+<meta name="theme-color" content="#0f766e">
+<link rel="canonical" href="https://vamshavardhan50.github.io/nib-ai/docs/use-cases.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="nib-rs docs">
+<meta property="og:title" content="What you can do · nib-rs docs">
+<meta property="og:description" content="Concrete things nib-rs can do today: continue text, train on your own corpus, build autocomplete, serve an API, embed a generator on any website, classify images, compress models, and teach how training works.">
+<meta property="og:url" content="https://vamshavardhan50.github.io/nib-ai/docs/use-cases.html">
+<meta name="twitter:card" content="summary">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230f766e'/%3E%3Ctext x='16' y='23' font-family='monospace' font-size='20' font-weight='bold' fill='%23e8fdf5' text-anchor='middle'%3En%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+<script>
+  try {
+    var saved = localStorage.getItem("nib-docs-theme");
+    if (saved === "light" || saved === "dark") document.documentElement.dataset.theme = saved;
+  } catch (e) {}
+</script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="topbar">
+  <a class="brand" href="index.html" aria-label="nib-rs documentation home">
+    <svg class="brand-mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M12 19l7-7 3 3-7 7-3-3z"></path>
+      <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"></path>
+      <path d="M2 2l7.586 7.586"></path>
+      <circle cx="11" cy="11" r="2"></circle>
+    </svg>
+    <span class="brand-name">nib<span class="brand-suffix">-rs</span></span>
+    <span class="brand-tag">docs</span>
+  </a>
+  <div class="topbar-actions">
+    <a class="pill" href="../index.html" title="Open the browser UI">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="14" rx="2"></rect><path d="M8 21h8M12 18v3"></path></svg>
+      <span class="label">Live UI</span>
+    </a>
+    <a class="pill" href="https://github.com/Vamshavardhan50/nib-ai" rel="noopener" title="GitHub repository">
+      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5a11.5 11.5 0 0 0-3.64 22.42c.58.1.79-.25.79-.56v-2.17c-3.22.7-3.9-1.37-3.9-1.37-.53-1.34-1.29-1.7-1.29-1.7-1.05-.72.08-.71.08-.71 1.16.08 1.77 1.2 1.77 1.2 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.57-.29-5.27-1.28-5.27-5.7 0-1.26.45-2.29 1.19-3.1-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11 11 0 0 1 5.8 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.12 3.05.74.81 1.18 1.84 1.18 3.1 0 4.43-2.7 5.4-5.28 5.69.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.56A11.5 11.5 0 0 0 12 .5z"></path></svg>
+      <span class="label">GitHub</span>
+    </a>
+    <button class="icon-btn" id="themeToggle" type="button" aria-label="Toggle theme">☾</button>
+    <button class="icon-btn" id="menuToggle" type="button" aria-label="Open navigation" aria-expanded="false" aria-controls="sidebar">☰</button>
+  </div>
+</header>
+
+<div class="shell">
+  <aside class="sidebar" id="sidebar">
+    <nav aria-label="Documentation">
+      <p class="nav-label">Documentation</p>
+      <a href="index.html">Overview</a>
+        <a href="getting-started.html">Getting started</a>
+        <a href="use-cases.html">What you can do</a>
+        <a href="cli.html">CLI reference</a>
+        <a href="http-api.html">HTTP API</a>
+        <a href="rust-api.html">Rust API</a>
+        <a href="models.html">Models &amp; training</a>
+        <a href="deployment.html">Deployment</a>
+        <a href="faq.html">FAQ</a>
+    </nav>
+    <div class="toc" id="toc" aria-label="On this page"></div>
+    <div class="sidebar-card">
+      <span class="k">Shipped dense model</span>
+      <span class="v">90,004,008 weights</span>
+      <small>45,117,066 bytes · 4-bit · v0.1.0</small>
+    </div>
+  </aside>
+
+  <main id="main">
+    <article>
+      <div class="crumbs"><a href="index.html">Docs</a> <span>/</span> <span>What you can do</span></div>
+      
+<section class="hero">
+  <p class="eyebrow">Capabilities</p>
+  <h1>What you can do with Nib</h1>
+  <p class="lead">
+    Nib is not a chatbot. It is a small, trainable character model plus a complete toolkit
+    around it. These are the concrete tasks it handles today, with the exact command or API
+    for each one.
+  </p>
+</section>
+
+<h2>Pick the right model first</h2>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>You want…</th><th>Use</th><th>Why</th></tr></thead>
+  <tbody>
+    <tr><td>An instant local demo</td><td><code>turbo.bin</code></td><td>Under 1 MB, fast CPU generation, low memory</td></tr>
+    <tr><td>A real dense 90M-weight artifact</td><td><code>nib.bin</code></td><td>Every weight stored, 45 MB at 4 bits, slower inference</td></tr>
+    <tr><td>To learn or modify the pipeline</td><td><code>CharLM</code> (<code>nib train</code>)</td><td>Plain JSON weights, tiny configurable MLP</td></tr>
+    <tr><td>Image classification</td><td><code>VisionCNN</code></td><td>Convolution and pooling trained from a manifest</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h2>1. Continue text in a learned style</h2>
+<p><strong>The problem:</strong> you want offline, deterministic-ish text continuation without an API key, GPU, or Python stack.</p>
+<pre><code># Fast model: 200 characters in well under a second
+nib turbo-generate --model turbo.bin --tokenizer tokenizer.json \
+  --seed "ROMEO: " --length 200 --temperature 0.7
+
+# Dense model: slower, but every one of the 90M weights is used
+nib dense-generate --model nib.bin --tokenizer tokenizer.json \
+  --seed "First Citizen: Before we proceed any further, hear me speak." \
+  --length 120 --temperature 0.7</code></pre>
+<p><strong>Real output from the shipped <code>nib.bin</code></strong> (temperature 0.7):</p>
+<pre><code>First Citizen: Before we proceed any further, hear me speak.
+
+CORIOLANUS:
+Au, I chole vile wishing hear ford fanit. Bubl as, no Rome.
+
+COMINIUS:
+I sull were your be somen:</code></pre>
+<p>
+  It reproduces speaker labels, line breaks, and Elizabethan spelling patterns. It does not
+  understand the plot. Longer, natural prompts produce better output than one-word seeds.
+</p>
+
+<h2>2. Train on your own text</h2>
+<p><strong>The problem:</strong> you have a corpus — notes, lyrics, source code, logs, a novel — and want a model that mimics it.</p>
+<pre><code># 1. Put UTF-8 text in a file, e.g. mydata.txt
+# 2. Train a small readable CharLM (JSON, fast)
+nib train --input mydata.txt --output model.json --tokenizer tokenizer.json \
+  --context 12 --hidden 128 --embed 24 --epochs 40 --lr 0.1
+
+# 3. Or train the compact Turbo model for better quality at ~1 MB
+nib turbo-train --input mydata.txt --output turbo.bin --tokenizer tokenizer.json \
+  --target 100000000 --context 64 --embed 128 --rank 30 \
+  --epochs 5 --batch-size 32 --max-samples 50000
+
+# 4. Or train a dense model from random weights (slow on CPU)
+nib dense-train --input mydata.txt --output my-dense.bin --tokenizer tokenizer.json \
+  --target 100000000 --epochs 1 --max-samples 2000 --batch-size 128 --lr 0.01</code></pre>
+<ul>
+  <li><strong>Use at least ~100 KB of clean text.</strong> More data helps more than more epochs.</li>
+  <li><strong>Use a matching tokenizer.</strong> <code>train</code> and <code>turbo-train</code> build one from the corpus if the file is missing. Keep the tokenizer with the model.</li>
+  <li><strong>Character-level means every character counts.</strong> Mixed encodings, HTML boilerplate, or binary junk become part of the vocabulary.</li>
+  <li><strong>Validate by sampling, not just loss.</strong> The trainer reports training cross-entropy; there is no held-out split.</li>
+</ul>
+
+<h2>3. Build a next-character predictor or autocomplete</h2>
+<p><strong>The problem:</strong> you need a tiny model that scores the next character given a short context, inside a Rust program.</p>
+<pre><code>use nib_rs::{dense, turbo, Tokenizer};
+
+let tok = Tokenizer::load("tokenizer.json")?;
+let mut model = dense::load_int4("nib.bin")?;
+let context = model.config.context;
+
+let mut ctx = turbo::context_from_seed(&amp;tok, "Once upon a time", context);
+let mut out = String::from("Once upon a time");
+for _ in 0..40 {
+    let probs = model.predict(&amp;ctx);
+    let next = turbo::sample(&amp;probs, 0.7);
+    out.push(tok.id_to_char.get(&amp;next).copied().unwrap_or('?'));
+    ctx.remove(0);
+    ctx.push(next);
+}
+println!("{out}");</code></pre>
+<p>
+  <code>predict</code> returns a probability vector over the 62-character vocabulary. Use
+  <code>argmax</code> for deterministic completion or <code>turbo::sample</code> for creative
+  continuation. The context is fixed at 64 characters; slide the window as you go.
+</p>
+
+<h2>4. Run a JSON API for any client</h2>
+<p><strong>The problem:</strong> a website, script, or mobile app needs a simple HTTP endpoint.</p>
+<pre><code>nib serve --model nib.bin --tokenizer tokenizer.json --host 0.0.0.0 --port 8080</code></pre>
+<pre><code>curl -X POST http://127.0.0.1:8080/api/generate \
+  -H "content-type: application/json" \
+  -d '{"prompt":"ROMEO: ","length":120,"temperature":0.7}'</code></pre>
+<p>
+  The response is plain JSON with <code>text</code>, <code>prompt</code>, <code>length</code>,
+  <code>temperature</code>, and <code>ms</code>. CORS is open, so a page on any origin can call
+  it. See the <a href="http-api.html">HTTP API reference</a> for every endpoint and error code.
+</p>
+
+<h2>5. Put a generator on any website</h2>
+<p><strong>The problem:</strong> you want a working demo on GitHub Pages, Netlify, Vercel, Cloudflare Pages, or an existing site, without a frontend build.</p>
+<pre><code># Export the single-file UI
+nib web-export --output index.html
+
+# Host index.html anywhere static, then point it at the API
+https://your-site.example/?api=https://your-nib-api.example</code></pre>
+<pre><code>&lt;iframe src="https://your-site.example/?api=https://your-nib-api.example"
+        width="100%" height="760"
+        style="border:0;border-radius:16px"
+        title="nib-rs language model"&gt;&lt;/iframe&gt;</code></pre>
+<p>
+  The UI stores the endpoint in <code>localStorage</code>, checks <code>/health</code>, and
+  shows the ready-made iframe snippet. Static hosting cannot run Rust, so the API lives on a
+  separate VPS, Docker host, Render, Railway, Fly.io, or Cloud Run service.
+</p>
+
+<h2>6. Embed the model in a Rust application</h2>
+<p><strong>The problem:</strong> you want generation in-process, with no server and no network hop.</p>
+<pre><code>[dependencies]
+nib-rs = { git = "https://github.com/Vamshavardhan50/nib-ai.git" }</code></pre>
+<pre><code>use nib_rs::{dense, Tokenizer};
+
+let tok = Tokenizer::load("tokenizer.json")?;
+let mut model = dense::load_int4("nib.bin")?;
+let text = dense::generate_text(&amp;mut model, &amp;tok, "ROMEO: ", 120, 0.7);
+println!("{text}");</code></pre>
+<p>
+  The <a href="rust-api.html">Rust API page</a> covers training, quantization, pruning,
+  low-rank models, vision, and the HTTP server. Dense loading needs roughly 400 MB of RAM;
+  Turbo stays under about 20 MB.
+</p>
+
+<h2>7. Ship it with Docker or a single binary</h2>
+<p><strong>The problem:</strong> you need a reproducible deployment with no runtime dependencies.</p>
+<pre><code># Fast Turbo image
+docker build -t nib-turbo .
+docker run --rm -p 8080:8080 nib-turbo
+
+# 90M dense image
+docker build --build-arg MODEL=nib.bin -t nib-dense .
+docker run --rm -p 8080:8080 --memory=1g nib-dense</code></pre>
+<p>
+  The runtime image contains the <code>nib</code> binary, one model, and the tokenizer. See
+  <a href="deployment.html">Deployment</a> for systemd, Caddy, nginx, GitHub Pages, and
+  platform-specific settings.
+</p>
+
+<h2>8. Classify images with the CNN</h2>
+<p><strong>The problem:</strong> you want a from-scratch convolutional classifier for a small, controlled image set — shapes, colors, symbols, simple objects.</p>
+<pre><code># manifest.txt: one "path label" pair per line
+# data/red/01.png 0
+# data/blue/01.png 1
+
+nib vision-train --manifest manifest.txt --output vision.json \
+  --image-size 16 --channels 3 --classes 2 --epochs 20 --batch-size 16 --lr 0.01
+
+nib vision-predict --model vision.json --image data/red/02.png \
+  --classes classes.txt</code></pre>
+<p>
+  <code>classes.txt</code> is optional: one display name per line. The CNN resizes images,
+  converts channels, normalizes pixels, and trains convolution, pooling, and the final linear
+  layer with hand-written backprop. It is suitable for toy or narrow datasets, not ImageNet.
+</p>
+
+<h2>9. Explore size and compression tradeoffs</h2>
+<p><strong>The problem:</strong> you want to see exactly what fits in a size budget before committing to a training run.</p>
+<pre><code># Turbo: logical shape vs stored factors vs file bytes
+nib turbo-info --target 100000000 --tokenizer tokenizer.json
+
+# Dense: exact parameters and 4-bit bytes for a hidden width
+nib dense-info --hidden 10902 --tokenizer tokenizer.json
+
+# Materialize a dense model, then prune and fine-tune it
+nib dense-build --turbo turbo.bin --output dense-100m.bin --tokenizer tokenizer.json
+nib dense-train --input shakespeare.txt --output nib.bin --tokenizer tokenizer.json \
+  --init-dense dense-100m.bin --hidden 10902 \
+  --epochs 3 --max-samples 20000 --batch-size 128 --lr 0.01</code></pre>
+<p>
+  <code>turbo-info</code> and <code>dense-info</code> are instant and do not allocate the
+  model. Use them to choose a shape, then train once. The <a href="models.html">Models &amp;
+  training</a> page has the full size math and the 100B impossibility argument.
+</p>
+
+<h2>10. Learn or teach how a language model works</h2>
+<p><strong>The problem:</strong> you want a complete, readable implementation instead of a framework call.</p>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Topic</th><th>File</th><th>What is hand-written</th></tr></thead>
+  <tbody>
+    <tr><td>Tensors and indexing</td><td><code>src/tensor.rs</code></td><td><code>Tensor1</code>, <code>Tensor2</code>, <code>Tensor4</code></td></tr>
+    <tr><td>Layers</td><td><code>src/layers.rs</code></td><td>Linear and embedding forward/backward</td></tr>
+    <tr><td>Text model</td><td><code>src/model.rs</code></td><td>CharLM, tokenizer, trainer, sampling</td></tr>
+    <tr><td>Compression</td><td><code>src/turbo.rs</code>, <code>src/dense.rs</code></td><td>Low-rank factors, int8, 4-bit, pruning</td></tr>
+    <tr><td>Vision</td><td><code>src/vision.rs</code></td><td>Conv2d, max pooling, CNN backprop</td></tr>
+    <tr><td>Serving</td><td><code>src/web.rs</code></td><td>HTTP parsing, JSON API, CORS, UI</td></tr>
+  </tbody>
+</table>
+</div>
+<p>
+  Every layer is a normal Rust struct with explicit gradients. Run <code>cargo test</code> to
+  see shape, roundtrip, training, and HTTP tests. There is no autograd and no hidden
+  framework magic to trace through.
+</p>
+
+<h2>What it cannot do</h2>
+<div class="callout warn">
+  <strong>Set expectations before you build on it</strong>
+  <p>
+    The shipped models are character-level MLPs trained on 200 KB of Shakespeare. They
+    continue text; they do not answer questions, follow instructions, browse, call tools, or
+    hold a conversation. There is no attention, no BPE tokenizer, no chat template, and no
+    world knowledge beyond the corpus.
+  </p>
+</div>
+<ul>
+  <li><strong>No question answering or reasoning.</strong> “What is the capital of France?” is outside the training objective.</li>
+  <li><strong>No long context.</strong> The window is 64 characters; longer prompts are truncated from the left.</li>
+  <li><strong>No streaming or batching.</strong> One JSON response per request; generation is serialized.</li>
+  <li><strong>No GPU backend.</strong> Everything runs on the CPU through <code>ndarray</code>.</li>
+  <li><strong>No built-in auth, TLS, or rate limiting.</strong> Put a reverse proxy in front of a public instance.</li>
+  <li><strong>No 100B model in 100 MB.</strong> That is physically impossible at any usable precision; Nib targets 90M weights in 45 MB.</li>
+</ul>
+
+<h2>Recipe chooser</h2>
+<div class="grid two">
+  <div class="card">
+    <h3>“I just want to try it”</h3>
+    <pre><code>nib turbo-generate --model turbo.bin \
+  --tokenizer tokenizer.json --seed "ROMEO: "</code></pre>
+    <p>Fast, tiny, no extra setup.</p>
+  </div>
+  <div class="card">
+    <h3>“I want the real dense model”</h3>
+    <pre><code>nib dense-generate --model nib.bin \
+  --tokenizer tokenizer.json \
+  --seed "First Citizen: Before we proceed any further, hear me speak."</code></pre>
+    <p>All 90,004,008 weights, 45.12 MB on disk.</p>
+  </div>
+  <div class="card">
+    <h3>“I have my own text”</h3>
+    <pre><code>nib turbo-train --input mydata.txt \
+  --output turbo.bin --tokenizer tokenizer.json \
+  --epochs 5 --max-samples 50000</code></pre>
+    <p>Build a model in minutes on a laptop CPU.</p>
+  </div>
+  <div class="card">
+    <h3>“I need a web API”</h3>
+    <pre><code>nib serve --model turbo.bin \
+  --tokenizer tokenizer.json --port 8080</code></pre>
+    <p>Then POST to <code>/api/generate</code> from any origin.</p>
+  </div>
+</div>
+
+      <footer class="footer">
+        <div class="footer-row">
+          <span><strong>nib-rs</strong> 0.1.0</span>
+          <span class="dotsep">·</span>
+          <span>Apache-2.0</span>
+          <span class="dotsep">·</span>
+          <a href="https://github.com/Vamshavardhan50/nib-ai" rel="noopener">GitHub</a>
+          <span class="dotsep">·</span>
+          <a href="https://github.com/Vamshavardhan50/nib-ai/issues" rel="noopener">Issues</a>
+          <span class="dotsep">·</span>
+          <a href="index.html">Docs home</a>
+        </div>
+        <p class="small muted">Built from scratch in Rust. No pre-trained weights, no external model files.</p>
+      </footer>
+    </article>
+  </main>
+</div>
+
+<script src="docs.js" defer></script>
+</body>
+</html>

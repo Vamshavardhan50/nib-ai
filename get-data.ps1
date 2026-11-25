@@ -1,4 +1,4 @@
-# Download real-world training data for cactus-rs.
+# Download real-world training data for nib-rs.
 #
 # Usage:
 #   .\get-data.ps1                 # Tiny Shakespeare (default, ~1.1 MB)
@@ -43,4 +43,4 @@ switch ($Dataset) {
 
 Write-Host ""
 Write-Host "Next: train on it with" -ForegroundColor Cyan
-Write-Host "  .\target\release\cactus.exe train --input $Out --output model.json --tokenizer tokenizer.json --epochs 40"
+Write-Host "  .\target\release\nib.exe train --input $Out --output model.json --tokenizer tokenizer.json --epochs 40"

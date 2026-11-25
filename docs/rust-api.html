@@ -1,0 +1,353 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rust API · nib-rs docs</title>
+<meta name="description" content="Use nib-rs as a Rust crate: tokenizer, CharLM training, Turbo and dense models, quantization, generation, vision, and the HTTP server.">
+<meta name="theme-color" content="#0f766e">
+<link rel="canonical" href="https://vamshavardhan50.github.io/nib-ai/docs/rust-api.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="nib-rs docs">
+<meta property="og:title" content="Rust API · nib-rs docs">
+<meta property="og:description" content="Use nib-rs as a Rust crate: tokenizer, CharLM training, Turbo and dense models, quantization, generation, vision, and the HTTP server.">
+<meta property="og:url" content="https://vamshavardhan50.github.io/nib-ai/docs/rust-api.html">
+<meta name="twitter:card" content="summary">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230f766e'/%3E%3Ctext x='16' y='23' font-family='monospace' font-size='20' font-weight='bold' fill='%23e8fdf5' text-anchor='middle'%3En%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+<script>
+  try {
+    var saved = localStorage.getItem("nib-docs-theme");
+    if (saved === "light" || saved === "dark") document.documentElement.dataset.theme = saved;
+  } catch (e) {}
+</script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="topbar">
+  <a class="brand" href="index.html" aria-label="nib-rs documentation home">
+    <svg class="brand-mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M12 19l7-7 3 3-7 7-3-3z"></path>
+      <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"></path>
+      <path d="M2 2l7.586 7.586"></path>
+      <circle cx="11" cy="11" r="2"></circle>
+    </svg>
+    <span class="brand-name">nib<span class="brand-suffix">-rs</span></span>
+    <span class="brand-tag">docs</span>
+  </a>
+  <div class="topbar-actions">
+    <a class="pill" href="../index.html" title="Open the browser UI">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="14" rx="2"></rect><path d="M8 21h8M12 18v3"></path></svg>
+      <span class="label">Live UI</span>
+    </a>
+    <a class="pill" href="https://github.com/Vamshavardhan50/nib-ai" rel="noopener" title="GitHub repository">
+      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5a11.5 11.5 0 0 0-3.64 22.42c.58.1.79-.25.79-.56v-2.17c-3.22.7-3.9-1.37-3.9-1.37-.53-1.34-1.29-1.7-1.29-1.7-1.05-.72.08-.71.08-.71 1.16.08 1.77 1.2 1.77 1.2 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.57-.29-5.27-1.28-5.27-5.7 0-1.26.45-2.29 1.19-3.1-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11 11 0 0 1 5.8 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.12 3.05.74.81 1.18 1.84 1.18 3.1 0 4.43-2.7 5.4-5.28 5.69.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.56A11.5 11.5 0 0 0 12 .5z"></path></svg>
+      <span class="label">GitHub</span>
+    </a>
+    <button class="icon-btn" id="themeToggle" type="button" aria-label="Toggle theme">☾</button>
+    <button class="icon-btn" id="menuToggle" type="button" aria-label="Open navigation" aria-expanded="false" aria-controls="sidebar">☰</button>
+  </div>
+</header>
+
+<div class="shell">
+  <aside class="sidebar" id="sidebar">
+    <nav aria-label="Documentation">
+      <p class="nav-label">Documentation</p>
+      <a href="index.html">Overview</a>
+        <a href="getting-started.html">Getting started</a>
+        <a href="use-cases.html">What you can do</a>
+        <a href="cli.html">CLI reference</a>
+        <a href="http-api.html">HTTP API</a>
+        <a href="rust-api.html">Rust API</a>
+        <a href="models.html">Models &amp; training</a>
+        <a href="deployment.html">Deployment</a>
+        <a href="faq.html">FAQ</a>
+    </nav>
+    <div class="toc" id="toc" aria-label="On this page"></div>
+    <div class="sidebar-card">
+      <span class="k">Shipped dense model</span>
+      <span class="v">90,004,008 weights</span>
+      <small>45,117,066 bytes · 4-bit · v0.1.0</small>
+    </div>
+  </aside>
+
+  <main id="main">
+    <article>
+      <div class="crumbs"><a href="index.html">Docs</a> <span>/</span> <span>Rust API</span></div>
+      
+<section class="hero">
+  <p class="eyebrow">Library</p>
+  <h1>Rust API</h1>
+  <p class="lead">
+    Nib is both a CLI and a library. Add <code>nib-rs</code> to a project to train, quantize,
+    load, and generate with the same code paths the binary uses.
+  </p>
+</section>
+
+<h2>Add the dependency</h2>
+<pre><code>[dependencies]
+nib-rs = { path = "../nib-ai" }
+anyhow = "1"</code></pre>
+<p>Or from Git:</p>
+<pre><code>[dependencies]
+nib-rs = { git = "https://github.com/Vamshavardhan50/nib-ai.git" }
+anyhow = "1"</code></pre>
+<p>The library crate name is <code>nib_rs</code> (Cargo converts the hyphen).</p>
+
+<h2>Module map</h2>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Module</th><th>Contents</th></tr></thead>
+  <tbody>
+    <tr><td><code>model</code></td><td><code>Tokenizer</code>, <code>ModelConfig</code>, <code>CharLM</code>, <code>Trainer</code></td></tr>
+    <tr><td><code>turbo</code></td><td><code>TurboConfig</code>, <code>TurboLM</code>, <code>TurboTrainer</code>, <code>LowRankLinear</code>, <code>generate_text</code>, <code>sample</code></td></tr>
+    <tr><td><code>dense</code></td><td><code>params</code>, <code>quantized_bytes</code>, <code>from_turbo</code>, <code>prune_hidden</code>, <code>save_int4</code>, <code>load_int4</code>, <code>DenseTrainer</code>, <code>generate_text</code></td></tr>
+    <tr><td><code>layers</code></td><td><code>Init</code>, <code>Linear</code>, <code>Embedding</code></td></tr>
+    <tr><td><code>tensor</code></td><td><code>Tensor1</code>, <code>Tensor2</code>, <code>Tensor4</code> wrappers</td></tr>
+    <tr><td><code>optimizer</code></td><td><code>SGD</code>, <code>Adam</code> configuration structs</td></tr>
+    <tr><td><code>vision</code></td><td><code>Conv2d</code>, <code>MaxPool2d</code>, <code>VisionCNN</code>, <code>VisionTrainer</code>, <code>load_image</code>, <code>load_manifest</code></td></tr>
+    <tr><td><code>web</code></td><td><code>serve</code>, <code>index_html</code></td></tr>
+  </tbody>
+</table>
+</div>
+
+<h2>Tokenizer</h2>
+<p>The tokenizer is character-level. It sorts and deduplicates every character in the training text, then maps each one to an index.</p>
+<pre><code>use nib_rs::Tokenizer;
+
+let text = std::fs::read_to_string("shakespeare.txt")?;
+let tok = Tokenizer::from_text(&text);
+println!("vocabulary: {} characters", tok.vocab_size());
+tok.save("tokenizer.json")?;
+
+let ids = tok.encode("ROMEO: ");
+let back = tok.decode(&ids);
+assert_eq!(back, "ROMEO: ");</code></pre>
+<p>Unknown characters map to index 0 when encoding. Keep the tokenizer that was built with a model; vocab size mismatches are rejected by the CLI and server.</p>
+
+<h2>CharLM: train and sample</h2>
+<pre><code>use nib_rs::{CharLM, ModelConfig, Tokenizer, Trainer};
+
+fn main() -&gt; anyhow::Result&lt;()&gt; {
+    let text = std::fs::read_to_string("shakespeare.txt")?;
+    let tok = Tokenizer::from_text(&text);
+    tok.save("tokenizer.json")?;
+
+    let config = ModelConfig {
+        vocab_size: tok.vocab_size(),
+        context: 16,
+        embed_dim: 32,
+        hidden_dim: 128,
+        ..Default::default()
+    };
+    let mut trainer = Trainer::new(CharLM::new(config), "sgd".into(), 0.1);
+
+    let ids = tok.encode(&text);
+    let context = trainer.model.config.context;
+    let mut windows = Vec::new();
+    for i in 0..ids.len().saturating_sub(context) {
+        windows.push((ids[i..i + context].to_vec(), ids[i + context]));
+    }
+
+    for epoch in 0..5 {
+        let mut loss = 0.0;
+        let mut batches = 0;
+        for batch in windows.chunks(32) {
+            loss += trainer.train_step(batch);
+            batches += 1;
+        }
+        println!("epoch {epoch}: {:.4}", loss / batches as f32);
+    }
+    trainer.save("model.json")?;
+    Ok(())
+}</code></pre>
+<p>Sampling uses the model's own <code>sample</code> helper:</p>
+<pre><code>use nib_rs::{CharLM, Tokenizer};
+
+let mut model = CharLM::load("model.json")?;
+let tok = Tokenizer::load("tokenizer.json")?;
+let context = model.config.context;
+
+let mut ctx = tok.encode("ROMEO: ");
+if ctx.len() &gt; context {
+    ctx = ctx[ctx.len() - context..].to_vec();
+}
+while ctx.len() &lt; context {
+    ctx.insert(0, tok.char_to_id.get(&amp;' ').copied().unwrap_or(0));
+}
+
+let mut out = String::from("ROMEO: ");
+for _ in 0..200 {
+    let probs = model.predict(&amp;ctx);
+    let next = CharLM::sample(&amp;probs, 0.7);
+    out.push(tok.id_to_char.get(&amp;next).copied().unwrap_or('?'));
+    ctx.remove(0);
+    ctx.push(next);
+}
+println!("{out}");</code></pre>
+
+<h2>TurboLM: low-rank training</h2>
+<pre><code>use nib_rs::{turbo, Tokenizer, TurboConfig, TurboLM, TurboTrainer};
+
+let tok = Tokenizer::load("tokenizer.json")?;
+let config = TurboConfig {
+    vocab_size: tok.vocab_size(),
+    context: 64,
+    embed_dim: 128,
+    hidden_dim: 12114,
+    rank: 30,
+};
+let model = TurboLM::new(config);
+println!("logical: {}", model.logical_params());
+println!("stored:  {}", model.stored_params());
+
+let mut trainer = TurboTrainer::new(model, 0.05);
+// let loss = trainer.train_step(&amp;batch);
+trainer.save("turbo.bin")?;
+
+let mut model = TurboLM::load("turbo.bin")?;
+let text = turbo::generate_text(&amp;mut model, &amp;tok, "ROMEO: ", 200, 0.7);
+println!("{text}");</code></pre>
+<p>
+  <code>TurboTrainer::train_step</code> accepts <code>&amp;[(Vec&lt;usize&gt;, usize)]</code>:
+  one context window and one next-token target per sample. It processes the batch as matrices,
+  which is much faster than a per-sample loop.
+</p>
+
+<h2>DenseLM: load, generate, prune, train</h2>
+<pre><code>use nib_rs::{dense, Tokenizer};
+
+let tok = Tokenizer::load("tokenizer.json")?;
+
+// Load a 4-bit dense artifact (nib.bin or any dense file).
+let mut model = dense::load_int4("nib.bin")?;
+println!("params: {}", dense::params(&amp;model.config));
+println!("file bytes: {}", dense::quantized_bytes(&amp;model.config));
+
+let text = dense::generate_text(&amp;mut model, &amp;tok, "ROMEO: ", 120, 0.7);
+println!("{text}");
+
+// Prune hidden units by outgoing fc2 weight norm.
+let smaller = dense::prune_hidden(&amp;model, 10902)?;
+dense::save_int4(&amp;smaller, "nib-90m.bin")?;</code></pre>
+<p>Fine-tune a dense model with <code>DenseTrainer</code>:</p>
+<pre><code>use nib_rs::dense::{self, DenseTrainer};
+
+let mut trainer = DenseTrainer::new(dense::load_int4("nib.bin")?, 0.01);
+let batch: Vec&lt;(Vec&lt;usize&gt;, usize)&gt; = vec![
+    (vec![0; 64], 1),
+];
+let loss = trainer.train_step(&amp;batch);
+println!("loss: {loss:.4}");
+trainer.save("nib.bin")?;</code></pre>
+<div class="callout warn">
+  <strong>Memory</strong>
+  <p>
+    Loading a dense model expands 4-bit weights into f32 matrices. A 90M model needs roughly
+    360 MB for weights alone, plus activations and gradients during training. Training holds
+    multiple copies of the large matrices; allow well over 1 GB for comfortable dense
+    fine-tuning.
+  </p>
+</div>
+
+<h2>Build dense from Turbo</h2>
+<pre><code>use nib_rs::{dense, TurboLM};
+
+let turbo = TurboLM::load("turbo.bin")?;
+let full = dense::from_turbo(&amp;turbo);
+assert_eq!(full.config.hidden_dim, turbo.config.hidden_dim);
+dense::save_int4(&amp;full, "dense-100m.bin")?;</code></pre>
+<p>
+  <code>from_turbo</code> materializes <code>W = U·V</code> for both low-rank layers. The result
+  is a normal dense <code>CharLM</code>; predictions match the Turbo model up to f32 rounding.
+</p>
+
+<h2>VisionCNN</h2>
+<pre><code>use nib_rs::{load_image, load_manifest, VisionCNN, VisionTrainer};
+
+let entries = load_manifest("manifest.txt")?;
+let (path, label) = &amp;entries[0];
+let image = load_image(path, 32, 32, 3)?;
+
+let model = VisionCNN::new(3, 32, 32, 2);
+let mut trainer = VisionTrainer::new(model, 0.01);
+let loss = trainer.train_step(&amp;[image], &amp;[*label]);
+println!("loss: {loss:.4}");
+trainer.save("vision.json")?;</code></pre>
+<p>Manifests contain one <code>path label</code> pair per line. <code>load_image</code> resizes to the requested height/width, converts to the requested channel count, and normalizes pixels.</p>
+
+<h2>Serve from Rust</h2>
+<pre><code>nib_rs::web::serve("nib.bin", "tokenizer.json", "127.0.0.1", 8080)?;</code></pre>
+<p>
+  <code>serve</code> blocks forever and auto-detects Turbo or dense models. To embed the UI in
+  another service, call <code>nib_rs::web::index_html()</code> for the static HTML string.
+</p>
+
+<h2>File formats</h2>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Format</th><th>Magic</th><th>Precision</th><th>Notes</th></tr></thead>
+  <tbody>
+    <tr><td>Turbo</td><td><code>CTURBO01</code></td><td>int8 per matrix</td><td>Low-rank factors, biases, embedding</td></tr>
+    <tr><td>Dense</td><td><code>CDENSE4\0</code></td><td>4-bit + one f32 row scale</td><td>Version 1; full dense matrices</td></tr>
+    <tr><td>CharLM</td><td>JSON</td><td>f32</td><td>Human-readable, easy to inspect</td></tr>
+    <tr><td>VisionCNN</td><td>JSON</td><td>f32</td><td>Human-readable</td></tr>
+  </tbody>
+</table>
+</div>
+<p>
+  Dense quantization stores each weight as a signed 4-bit nibble in <code>-7..7</code>, scaled
+  by <code>max_abs / 7</code> per row. Biases stay f32. The header records dimensions so a
+  mismatched file is rejected before inference. Formats are versioned; treat them as internal
+  unless you pin a version.
+</p>
+
+<h2>Threading</h2>
+<p>
+  <code>predict</code>, <code>train_step</code>, and <code>generate_text</code> take
+  <code>&amp;mut self</code>. Wrap a model in <code>std::sync::Mutex</code> to share it across
+  threads. The built-in server does exactly that, which serializes generation while still
+  allowing concurrent connections.
+</p>
+<pre><code>use std::sync::{Arc, Mutex};
+
+let model = Arc::new(Mutex::new(nib_rs::dense::load_int4("nib.bin")?));
+let shared = Arc::clone(&amp;model);
+std::thread::spawn(move || {
+    let mut model = shared.lock().unwrap();
+    // model.predict(...)
+});</code></pre>
+
+<h2>Docs and tests</h2>
+<pre><code>cargo doc --open --no-deps
+cargo test
+cargo test --doc</code></pre>
+<p>
+  The test suite covers tensor indexing, layer shapes, tokenizer roundtrips, training steps,
+  Turbo and dense save/load roundtrips, quantization prediction stability, pruning, vision
+  forward/backward passes, HTTP request parsing, CORS/UI wiring, and an in-process generate
+  roundtrip.
+</p>
+
+      <footer class="footer">
+        <div class="footer-row">
+          <span><strong>nib-rs</strong> 0.1.0</span>
+          <span class="dotsep">·</span>
+          <span>Apache-2.0</span>
+          <span class="dotsep">·</span>
+          <a href="https://github.com/Vamshavardhan50/nib-ai" rel="noopener">GitHub</a>
+          <span class="dotsep">·</span>
+          <a href="https://github.com/Vamshavardhan50/nib-ai/issues" rel="noopener">Issues</a>
+          <span class="dotsep">·</span>
+          <a href="index.html">Docs home</a>
+        </div>
+        <p class="small muted">Built from scratch in Rust. No pre-trained weights, no external model files.</p>
+      </footer>
+    </article>
+  </main>
+</div>
+
+<script src="docs.js" defer></script>
+</body>
+</html>

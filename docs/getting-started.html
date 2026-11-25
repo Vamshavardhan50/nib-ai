@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Getting started · nib-rs docs</title>
+<meta name="description" content="Install Rust, build nib-rs, serve the shipped 90M dense model, call the API, and train your first character-level model.">
+<meta name="theme-color" content="#0f766e">
+<link rel="canonical" href="https://vamshavardhan50.github.io/nib-ai/docs/getting-started.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="nib-rs docs">
+<meta property="og:title" content="Getting started · nib-rs docs">
+<meta property="og:description" content="Install Rust, build nib-rs, serve the shipped 90M dense model, call the API, and train your first character-level model.">
+<meta property="og:url" content="https://vamshavardhan50.github.io/nib-ai/docs/getting-started.html">
+<meta name="twitter:card" content="summary">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230f766e'/%3E%3Ctext x='16' y='23' font-family='monospace' font-size='20' font-weight='bold' fill='%23e8fdf5' text-anchor='middle'%3En%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+<script>
+  try {
+    var saved = localStorage.getItem("nib-docs-theme");
+    if (saved === "light" || saved === "dark") document.documentElement.dataset.theme = saved;
+  } catch (e) {}
+</script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="topbar">
+  <a class="brand" href="index.html" aria-label="nib-rs documentation home">
+    <svg class="brand-mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M12 19l7-7 3 3-7 7-3-3z"></path>
+      <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"></path>
+      <path d="M2 2l7.586 7.586"></path>
+      <circle cx="11" cy="11" r="2"></circle>
+    </svg>
+    <span class="brand-name">nib<span class="brand-suffix">-rs</span></span>
+    <span class="brand-tag">docs</span>
+  </a>
+  <div class="topbar-actions">
+    <a class="pill" href="../index.html" title="Open the browser UI">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="14" rx="2"></rect><path d="M8 21h8M12 18v3"></path></svg>
+      <span class="label">Live UI</span>
+    </a>
+    <a class="pill" href="https://github.com/Vamshavardhan50/nib-ai" rel="noopener" title="GitHub repository">
+      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5a11.5 11.5 0 0 0-3.64 22.42c.58.1.79-.25.79-.56v-2.17c-3.22.7-3.9-1.37-3.9-1.37-.53-1.34-1.29-1.7-1.29-1.7-1.05-.72.08-.71.08-.71 1.16.08 1.77 1.2 1.77 1.2 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.57-.29-5.27-1.28-5.27-5.7 0-1.26.45-2.29 1.19-3.1-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11 11 0 0 1 5.8 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.12 3.05.74.81 1.18 1.84 1.18 3.1 0 4.43-2.7 5.4-5.28 5.69.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.56A11.5 11.5 0 0 0 12 .5z"></path></svg>
+      <span class="label">GitHub</span>
+    </a>
+    <button class="icon-btn" id="themeToggle" type="button" aria-label="Toggle theme">☾</button>
+    <button class="icon-btn" id="menuToggle" type="button" aria-label="Open navigation" aria-expanded="false" aria-controls="sidebar">☰</button>
+  </div>
+</header>
+
+<div class="shell">
+  <aside class="sidebar" id="sidebar">
+    <nav aria-label="Documentation">
+      <p class="nav-label">Documentation</p>
+      <a href="index.html">Overview</a>
+        <a href="getting-started.html">Getting started</a>
+        <a href="use-cases.html">What you can do</a>
+        <a href="cli.html">CLI reference</a>
+        <a href="http-api.html">HTTP API</a>
+        <a href="rust-api.html">Rust API</a>
+        <a href="models.html">Models &amp; training</a>
+        <a href="deployment.html">Deployment</a>
+        <a href="faq.html">FAQ</a>
+    </nav>
+    <div class="toc" id="toc" aria-label="On this page"></div>
+    <div class="sidebar-card">
+      <span class="k">Shipped dense model</span>
+      <span class="v">90,004,008 weights</span>
+      <small>45,117,066 bytes · 4-bit · v0.1.0</small>
+    </div>
+  </aside>
+
+  <main id="main">
+    <article>
+      <div class="crumbs"><a href="index.html">Docs</a> <span>/</span> <span>Getting started</span></div>
+      
+<section class="hero">
+  <p class="eyebrow">Start here</p>
+  <h1>Getting started</h1>
+  <p class="lead">
+    From a clean machine to a running model in five minutes. The repository already contains a
+    trained 90M dense model and a compact Turbo model, so you can serve something useful before
+    training anything yourself.
+  </p>
+</section>
+
+<h2>Prerequisites</h2>
+<ul>
+  <li><strong>Rust stable</strong> (2021 edition). Install with <a href="https://rustup.rs" rel="noopener">rustup</a>.</li>
+  <li><strong>Windows:</strong> the GNU toolchain and MinGW. <code>build.ps1</code> locates MinGW automatically; plain <code>cargo build</code> also works if your toolchain is configured.</li>
+  <li><strong>No Python, Node, CUDA, or GPU.</strong> The server, trainer, tokenizer, and UI are all in the Rust binary.</li>
+  <li><strong>Disk and RAM:</strong> about 500 MB for <code>target/</code>; dense inference needs roughly 400 MB of RAM for the f32 weights.</li>
+</ul>
+<pre><code># Windows (PowerShell)
+winget install Rustlang.Rustup
+winget install BrechtSanders.WinLibs.POSIX.UCRT
+
+# macOS / Linux
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh</code></pre>
+<p class="muted small">Restart the terminal after installing so <code>cargo</code> is on <code>PATH</code>.</p>
+
+<h2>1. Clone and build</h2>
+<pre><code>git clone https://github.com/Vamshavardhan50/nib-ai.git
+cd nib-ai
+
+# Windows: finds MinGW and uses the GNU toolchain
+./build.ps1 -Release
+
+# Any platform with cargo on PATH
+cargo build --release</code></pre>
+<p>
+  The release profile enables LTO, one codegen unit, <code>panic = "abort"</code>, and symbol
+  stripping. The resulting binary is about <strong>3 MB</strong>.
+</p>
+
+<h2>2. Verify the binary</h2>
+<pre><code>./target/release/nib version
+./target/release/nib --help
+
+# Windows
+./target/release/nib.exe version</code></pre>
+<p>Expected output includes <code>nib-rs 0.1.0</code> and the full command list.</p>
+
+<h2>3. Run the shipped model</h2>
+<p>
+  <code>nib.bin</code> is a 45.12 MB dense model with 90,004,008 independent weights. Start the
+  server on localhost:
+</p>
+<pre><code>./target/release/nib serve --model nib.bin --tokenizer tokenizer.json --host 127.0.0.1 --port 8080
+
+# Windows
+./target/release/nib.exe serve --model nib.bin --tokenizer tokenizer.json --host 127.0.0.1 --port 8080</code></pre>
+<p>You should see:</p>
+<pre><code>nib server listening on http://127.0.0.1:8080/
+API: POST http://127.0.0.1:8080/api/generate
+model: nib.bin (45117066 bytes, 45.117 MB), CORS enabled</code></pre>
+<p>Check that it is alive and inspect the model metadata:</p>
+<pre><code>curl http://127.0.0.1:8080/health
+curl http://127.0.0.1:8080/api/info</code></pre>
+<pre><code>{"status":"ok"}
+
+{
+  "name": "DenseLM",
+  "format": "dense-int4",
+  "architecture": "dense MLP, 4-bit weights on disk",
+  "logical_parameters": 90004008,
+  "stored_parameters": 90004008,
+  "file_bytes": 45117066,
+  "config": { "vocab_size": 62, "embed_dim": 128, "hidden_dim": 10902, "context": 64 }
+}</code></pre>
+
+<h2>4. Generate text</h2>
+<h3>Browser UI</h3>
+<p>
+  Open <a href="http://127.0.0.1:8080/">http://127.0.0.1:8080/</a>. The page detects the model,
+  shows its size, and generates text. It also produces an <code>&lt;iframe&gt;</code> embed
+  snippet that preserves the API endpoint.
+</p>
+<h3>CLI</h3>
+<pre><code>./target/release/nib dense-generate --model nib.bin --tokenizer tokenizer.json \
+  --seed "First Citizen: Before we proceed any further, hear me speak." \
+  --length 160 --temperature 0.7</code></pre>
+<h3>HTTP</h3>
+<pre><code>curl -X POST http://127.0.0.1:8080/api/generate \
+  -H "content-type: application/json" \
+  -d '{"prompt":"First Citizen: Before we proceed any further, hear me speak.","length":120,"temperature":0.7}'</code></pre>
+<p>
+  The prompt is repeated to fill the 64-character context when it is shorter than that. Longer,
+  natural prompts produce the best results. Dense generation takes seconds per short request on
+  a laptop CPU; serve <code>turbo.bin</code> when you need a fast interactive demo.
+</p>
+
+<h2>5. Train your first model (CharLM)</h2>
+<p>
+  CharLM is the smallest and easiest model. It uses a plain JSON file, trains in seconds to
+  minutes on a laptop, and is a good way to verify the full pipeline.
+</p>
+<pre><code>./get-data.ps1
+
+./target/release/nib train --input shakespeare.txt --output model.json \
+  --tokenizer tokenizer.json --context 12 --hidden 128 --embed 24 \
+  --epochs 40 --lr 0.1</code></pre>
+<p>Then generate:</p>
+<pre><code>./target/release/nib generate --model model.json --tokenizer tokenizer.json \
+  --seed "ROMEO: " --length 300 --temperature 0.7</code></pre>
+<div class="callout">
+  <strong>What the loss means</strong>
+  <p>
+    The trainer prints cross-entropy loss. Lower is better; on the 200 KB Shakespeare prefix a
+    small CharLM typically falls from about 2.35 to about 1.46 after 40 epochs. These are
+    training losses, not held-out validation numbers.
+  </p>
+</div>
+
+<h2>6. Train TurboLM</h2>
+<p>
+  Turbo stores a 100M-entry shape as low-rank factors and quantizes them to int8. It trains
+  quickly and is the best choice for a fast web demo.
+</p>
+<pre><code>./target/release/nib turbo-train --input shakespeare.txt --output turbo.bin \
+  --tokenizer tokenizer.json --target 100000000 --context 64 --embed 128 \
+  --rank 30 --epochs 5 --lr 0.05 --batch-size 32</code></pre>
+<p>
+  A verified 5-epoch run on the 200 KB prefix went from loss <strong>2.3209</strong> to
+  <strong>1.7765</strong> and produced a <strong>994,656-byte</strong> file.
+</p>
+<pre><code>./target/release/nib turbo-generate --model turbo.bin --tokenizer tokenizer.json \
+  --seed "ROMEO: " --length 300 --temperature 0.7</code></pre>
+
+<h2>7. Build and prune DenseLM</h2>
+<p>
+  A dense model starts by materializing the trained Turbo factors into full matrices, then
+  fine-tuning every weight with dense gradients. The shipped model then prunes 1,212 hidden
+  units to land under 50 MB and fine-tunes the remaining sub-network.
+</p>
+<pre><code># Materialize the 100M dense model from Turbo
+./target/release/nib dense-build --turbo turbo.bin --output dense-100m.bin \
+  --tokenizer tokenizer.json
+
+# Fine-tune all 100M weights
+./target/release/nib dense-train --input shakespeare.txt --output dense-100m.bin \
+  --tokenizer tokenizer.json --init-turbo turbo.bin \
+  --epochs 2 --max-samples 20000 --batch-size 128 --lr 0.02
+
+# Prune to 10,902 hidden units and fine-tune the sub-network
+./target/release/nib dense-train --input shakespeare.txt --output nib.bin \
+  --tokenizer tokenizer.json --init-dense dense-100m.bin --hidden 10902 \
+  --epochs 3 --max-samples 20000 --batch-size 128 --lr 0.01</code></pre>
+<p>
+  The final file is <strong>45,117,066 bytes</strong> with <strong>90,004,008</strong>
+  parameters. Dense training is CPU-heavy: batch 128 is roughly 3× faster than batch 32 on the
+  development machine.
+</p>
+
+<h2>Project layout</h2>
+<pre><code>nib-ai/
+  src/
+    main.rs      CLI commands and training loops
+    model.rs     Tokenizer, CharLM, generic trainer
+    turbo.rs     Low-rank TurboLM and int8 format
+    dense.rs     DenseLM, pruning, 4-bit format, dense trainer
+    web.rs       HTTP server, JSON API, embedded UI
+    vision.rs    CNN, convolution, pooling, image loading
+    layers.rs    Linear and Embedding layers
+    tensor.rs    Tensor wrappers over ndarray
+    optimizer.rs SGD and Adam
+  docs/          This static documentation site
+  nib.bin        Shipped 90M dense model (45.12 MB)
+  turbo.bin      Shipped compact model (994,656 bytes)
+  tokenizer.json 62-character vocabulary
+  index.html     Static UI export
+  Dockerfile     Multi-stage build and runtime image
+  get-data.ps1   Public corpus downloader
+  build.ps1      Windows GNU build helper</code></pre>
+
+<h2>Troubleshooting</h2>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Symptom</th><th>Cause and fix</th></tr></thead>
+  <tbody>
+    <tr><td><code>cargo</code> is not recognized</td><td>Restart the terminal after installing rustup, or add <code>%USERPROFILE%\.cargo\bin</code> to <code>PATH</code>.</td></tr>
+    <tr><td>Linker or <code>dlltool</code> errors on Windows</td><td>Install WinLibs MinGW and use <code>./build.ps1 -Release</code>, which finds it automatically.</td></tr>
+    <tr><td><code>bind 0.0.0.0:8080</code> failed</td><td>Another process owns the port. Use <code>--port 8081</code> or stop the old process. On Windows: <code>Get-NetTCPConnection -LocalPort 8080</code>.</td></tr>
+    <tr><td><code>tokenizer vocab (...) does not match model vocab</code></td><td>The tokenizer was built from different text. Use the <code>tokenizer.json</code> that belongs to the model, or retrain both on the same corpus.</td></tr>
+    <tr><td><code>is not a nib model</code></td><td>The file is not a Turbo int8 (<code>CTURBO01</code>) or dense int4 (<code>CDENSE4</code>) artifact. Rebuild it with the commands above.</td></tr>
+    <tr><td>Generation is very slow</td><td>Expected for the 90M dense model on CPU. Serve <code>turbo.bin</code> for interactive use, shorten <code>length</code>, or use a faster machine.</td></tr>
+    <tr><td><code>413 Payload Too Large</code></td><td>The request body exceeds 64 KB. Send a shorter prompt or fewer fields.</td></tr>
+    <tr><td><code>prompt is limited to 4096 characters</code></td><td>The API caps prompts at 4,096 characters by design.</td></tr>
+    <tr><td>GitHub rejects a model file</td><td>GitHub blocks files over 100 MB. <code>nib.bin</code> is 45 MB and fits; use Git LFS or Releases for larger variants.</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h2>Next steps</h2>
+<div class="grid two">
+  <a class="card" href="use-cases.html"><h3>What you can do</h3><p>Ten practical recipes: text generation, custom training, autocomplete, APIs, websites, images, and compression.</p><div class="card-arrow">Find your use case →</div></a>
+  <a class="card" href="cli.html"><h3>CLI reference</h3><p>Every command and flag, including resume and prune recipes.</p><div class="card-arrow">Open reference →</div></a>
+  <a class="card" href="http-api.html"><h3>HTTP API</h3><p>Request and response schemas, errors, CORS, and client examples.</p><div class="card-arrow">Open API docs →</div></a>
+  <a class="card" href="models.html"><h3>Models &amp; training</h3><p>Architecture, size math, data provenance, and benchmarks.</p><div class="card-arrow">Read the deep dive →</div></a>
+  <a class="card" href="deployment.html"><h3>Deployment</h3><p>Docker, Pages, VPS, reverse proxies, and memory sizing.</p><div class="card-arrow">Deploy Nib →</div></a>
+</div>
+
+      <footer class="footer">
+        <div class="footer-row">
+          <span><strong>nib-rs</strong> 0.1.0</span>
+          <span class="dotsep">·</span>
+          <span>Apache-2.0</span>
+          <span class="dotsep">·</span>
+          <a href="https://github.com/Vamshavardhan50/nib-ai" rel="noopener">GitHub</a>
+          <span class="dotsep">·</span>
+          <a href="https://github.com/Vamshavardhan50/nib-ai/issues" rel="noopener">Issues</a>
+          <span class="dotsep">·</span>
+          <a href="index.html">Docs home</a>
+        </div>
+        <p class="small muted">Built from scratch in Rust. No pre-trained weights, no external model files.</p>
+      </footer>
+    </article>
+  </main>
+</div>
+
+<script src="docs.js" defer></script>
+</body>
+</html>

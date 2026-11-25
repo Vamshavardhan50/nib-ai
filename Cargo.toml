@@ -1,8 +1,8 @@
 [package]
-name = "cactus-rs"
+name = "nib-rs"
 version = "0.1.0"
 edition = "2021"
-description = "From-scratch neural networks in Rust - compact 100M-shape TurboLM under 1 MB, true 100M dense model at 4-bit (~50 MB), web API included"
+description = "From-scratch neural networks in Rust - compact 100M-shape TurboLM under 1 MB, true 90M dense model at 4-bit (45 MB), web API included"
 license = "Apache-2.0"
 keywords = ["neural-network", "from-scratch", "rust", "language-model", "training"]
 categories = ["development-tools::runtime", "machine-learning"]
@@ -17,11 +17,11 @@ anyhow = "1"
 image = "0.25"
 
 [[bin]]
-name = "cactus"
+name = "nib"
 path = "src/main.rs"
 
 [lib]
-name = "cactus_rs"
+name = "nib_rs"
 path = "src/lib.rs"
 
 [profile.release]
