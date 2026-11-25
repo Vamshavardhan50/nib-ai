@@ -85,12 +85,229 @@
   </p>
 </section>
 
-<h2>Start the server</h2>
-<pre><code>nib serve --model nib.bin --tokenizer tokenizer.json --host 0.0.0.0 --port 8080</code></pre>
-<p>Default base URL: <code>http://127.0.0.1:8080</code>. In containers, bind <code>0.0.0.0</code>; for local-only access, bind <code>127.0.0.1</code>.</p>
-<pre><code>nib server listening on http://localhost:8080/
+<div class="callout warn">
+  <strong>There is no public API endpoint out of the box</strong>
+  <p>
+    The hosted UI at <code>vamshavardhan50.github.io/nib-ai</code> is static and has no backend.
+    Until you run or deploy <code>nib serve</code>, the only endpoint is on your own machine.
+    This section covers a local URL, a temporary public URL, and a permanent HTTPS endpoint.
+  </p>
+</div>
+
+<h2 id="endpoint">What is the endpoint?</h2>
+<p>
+  The base URL depends on where the Rust process runs. The generation path is always
+  <code>/api/generate</code>.
+</p>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Where the server runs</th><th>Base URL</th><th>Who can reach it</th></tr></thead>
+  <tbody>
+    <tr><td>Your machine (local only)</td><td><code>http://127.0.0.1:8080</code></td><td>Only that machine</td></tr>
+    <tr><td>Your machine (LAN / Docker)</td><td><code>http://192.168.1.20:8080</code></td><td>Devices on the same network</td></tr>
+    <tr><td>VPS or cloud service</td><td><code>https://api.example.com</code></td><td>Anyone on the internet</td></tr>
+    <tr><td>Temporary tunnel</td><td><code>https://random-name.trycloudflare.com</code></td><td>Anyone, while the tunnel runs</td></tr>
+  </tbody>
+</table>
+</div>
+<p>
+  <strong>Local generation endpoint:</strong> <code>POST http://127.0.0.1:8080/api/generate</code>.
+  The static UI on GitHub Pages needs a public HTTPS base URL before it can generate anything.
+</p>
+
+<h2>Step-by-step: a local endpoint</h2>
+<div class="steps">
+  <div class="step">
+    <div>
+      <h4>1. Get the binary, model, and tokenizer</h4>
+      <pre><code>git clone https://github.com/Vamshavardhan50/nib-ai.git
+cd nib-ai
+cargo build --release
+
+# Windows: .\build.ps1 -Release</code></pre>
+      <p>
+        The repository tracks both <code>nib.bin</code> (90M dense, 45.12 MB) and
+        <code>turbo.bin</code> (994,656 bytes), plus <code>tokenizer.json</code>.
+      </p>
+    </div>
+  </div>
+  <div class="step">
+    <div>
+      <h4>2. Start the server</h4>
+      <pre><code># macOS / Linux — dense model
+./target/release/nib serve --model nib.bin --tokenizer tokenizer.json \
+  --host 127.0.0.1 --port 8080
+
+# Windows PowerShell
+.\target\release\nib.exe serve --model nib.bin --tokenizer tokenizer.json \
+  --host 127.0.0.1 --port 8080</code></pre>
+      <p>
+        Use <code>turbo.bin</code> for a faster demo. Bind <code>127.0.0.1</code> for local-only
+        access; bind <code>0.0.0.0</code> when a container, reverse proxy, or another device must
+        reach the server.
+      </p>
+    </div>
+  </div>
+  <div class="step">
+    <div>
+      <h4>3. Confirm the endpoint</h4>
+      <pre><code>curl http://127.0.0.1:8080/health
+curl http://127.0.0.1:8080/api/info</code></pre>
+      <p>The server prints its own URLs at startup:</p>
+      <pre><code>nib server listening on http://localhost:8080/
 API: POST http://localhost:8080/api/generate
 model: nib.bin (45117066 bytes, 45.117 MB), CORS enabled</code></pre>
+    </div>
+  </div>
+  <div class="step">
+    <div>
+      <h4>4. Generate text</h4>
+      <pre><code>curl -X POST http://127.0.0.1:8080/api/generate \
+  -H "content-type: application/json" \
+  -d '{"prompt":"ROMEO: ","length":80,"temperature":0.7}'</code></pre>
+      <p>
+        If this works, the endpoint is correct. The browser UI is at
+        <code>http://127.0.0.1:8080/</code>.
+      </p>
+    </div>
+  </div>
+</div>
+
+<h2 id="public-endpoint">Step-by-step: a public HTTPS endpoint</h2>
+<p>
+  A public endpoint is required for the hosted Pages UI, another website, or a mobile app.
+  Choose one host, then follow the same six steps.
+</p>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Host</th><th>Best for</th><th>HTTPS</th></tr></thead>
+  <tbody>
+    <tr><td>Render, Railway, Fly.io, Cloud Run</td><td>Managed Docker deploy, least server maintenance</td><td>Provided</td></tr>
+    <tr><td>VPS + Caddy or nginx</td><td>Full control, persistent process, predictable cost</td><td>Let's Encrypt</td></tr>
+    <tr><td>Cloudflare Tunnel / ngrok</td><td>A quick demo from your laptop</td><td>Provided</td></tr>
+    <tr><td>GitHub Pages, Netlify, Vercel</td><td>Static UI and docs only</td><td>Cannot run the API</td></tr>
+  </tbody>
+</table>
+</div>
+<div class="steps">
+  <div class="step">
+    <div>
+      <h4>1. Build once</h4>
+      <pre><code>cargo build --release</code></pre>
+      <p>You need three files: the <code>nib</code> binary, <code>nib.bin</code> or <code>turbo.bin</code>, and <code>tokenizer.json</code>.</p>
+    </div>
+  </div>
+  <div class="step">
+    <div>
+      <h4>2. Copy the files to the host</h4>
+      <pre><code>scp target/release/nib nib.bin tokenizer.json user@your-host:/opt/nib/</code></pre>
+      <p>For Docker, use the included Dockerfile instead of copying files by hand.</p>
+    </div>
+  </div>
+  <div class="step">
+    <div>
+      <h4>3. Run on all interfaces</h4>
+      <pre><code>./nib serve --model nib.bin --tokenizer tokenizer.json \
+  --host 0.0.0.0 --port 8080</code></pre>
+      <p>
+        Keep the process alive with systemd, Docker, or the platform's process manager.
+        <code>127.0.0.1</code> is not reachable from outside the machine.
+      </p>
+    </div>
+  </div>
+  <div class="step">
+    <div>
+      <h4>4. Put HTTPS in front</h4>
+      <p>On a VPS, Caddy is the shortest path:</p>
+      <pre><code>api.example.com {
+    reverse_proxy 127.0.0.1:8080 {
+        transport http {
+            read_timeout 300s
+            write_timeout 300s
+        }
+    }
+}</code></pre>
+      <p>Render, Railway, Fly.io, and Cloud Run terminate TLS for you and give you an HTTPS URL.</p>
+    </div>
+  </div>
+  <div class="step">
+    <div>
+      <h4>5. Test from outside your network</h4>
+      <pre><code>curl https://api.example.com/health
+curl https://api.example.com/api/info
+
+curl -X POST https://api.example.com/api/generate \
+  -H "content-type: application/json" \
+  -d '{"prompt":"ROMEO: ","length":40,"temperature":0.7}'</code></pre>
+      <p>Test from a phone on mobile data, not just from the same machine.</p>
+    </div>
+  </div>
+  <div class="step">
+    <div>
+      <h4>6. Connect the hosted UI</h4>
+      <pre><code>https://vamshavardhan50.github.io/nib-ai/?api=https://api.example.com</code></pre>
+      <p>
+        The UI saves the endpoint in <code>localStorage</code> and includes it in the iframe
+        snippet. The API must be HTTPS: an HTTPS page cannot call an HTTP endpoint.
+      </p>
+    </div>
+  </div>
+  <div class="step">
+    <div>
+      <h4>7. Lock it down</h4>
+      <p>
+        The built-in server has no authentication, TLS, or rate limiting, and CORS is
+        <code>*</code>. Add auth and limits at the reverse proxy before making a dense model
+        public. Prefer Turbo for open demos; it is roughly two orders of magnitude cheaper per
+        character.
+      </p>
+    </div>
+  </div>
+</div>
+
+<h3>Temporary public URL with a tunnel</h3>
+<p>
+  For a demo, you can expose your local server without deploying. The laptop must stay awake,
+  the URL changes each run, and there is no SLA. Do not use this for production.
+</p>
+<pre><code># Terminal 1: local server
+nib serve --model turbo.bin --tokenizer tokenizer.json --host 127.0.0.1 --port 8080
+
+# Terminal 2: Cloudflare Tunnel (no account needed for a quick tunnel)
+cloudflared tunnel --url http://127.0.0.1:8080
+# prints: https://random-name.trycloudflare.com</code></pre>
+<p>Then open:</p>
+<pre><code>https://vamshavardhan50.github.io/nib-ai/?api=https://random-name.trycloudflare.com</code></pre>
+<p>
+  <code>ngrok http 8080</code> works the same way. Both provide HTTPS, so the static UI can
+  call them without mixed-content errors.
+</p>
+
+<h2>How the UI chooses an endpoint</h2>
+<ol>
+  <li>The <code>?api=</code> query parameter, if present.</li>
+  <li>The <code>nib-api</code> value saved in <code>localStorage</code> from a previous visit.</li>
+  <li>The page's own origin, when it is served by <code>nib serve</code> on a non-static host.</li>
+  <li>Otherwise, an empty endpoint. On GitHub Pages the UI shows “enter an API endpoint”.</li>
+</ol>
+<p>Trailing slashes are removed. The API base is stored exactly as entered.</p>
+
+<h2>Endpoint troubleshooting</h2>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Symptom</th><th>Cause and fix</th></tr></thead>
+  <tbody>
+    <tr><td>UI says “enter an API endpoint”</td><td>You are on a static host with no backend. Start or deploy the API and add <code>?api=</code>.</td></tr>
+    <tr><td>Works on the server, not from your phone</td><td>The server is bound to <code>127.0.0.1</code>. Restart with <code>--host 0.0.0.0</code> and allow the port in the firewall.</td></tr>
+    <tr><td><code>Failed to fetch</code> / CORS error</td><td>Wrong URL, server down, or an HTTPS page calling HTTP. Use the exact HTTPS base URL.</td></tr>
+    <tr><td><code>404</code> on generation</td><td>Use <code>POST /api/generate</code>, not <code>GET</code>, and include <code>/api</code>.</td></tr>
+    <tr><td>Connection refused in Docker</td><td>Bind <code>0.0.0.0</code> inside the container and publish the port: <code>-p 8080:8080</code>.</td></tr>
+    <tr><td>Request times out on dense</td><td>Raise the proxy timeout to 300 s and shorten <code>length</code>. Use Turbo for interactive traffic.</td></tr>
+    <tr><td><code>413</code> or <code>prompt is limited</code></td><td>Body limit is 64 KB and prompts are capped at 4,096 characters.</td></tr>
+    <tr><td>Health works but generation is slow</td><td>Expected for the 90M dense model on CPU. Serve <code>turbo.bin</code> for a fast demo.</td></tr>
+  </tbody>
+</table>
+</div>
 
 <h2>Endpoints</h2>
 <div class="table-wrap">

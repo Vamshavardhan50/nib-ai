@@ -267,6 +267,17 @@
 
 <h2>API and deployment</h2>
 
+<h3>What is the API endpoint?</h3>
+<p>
+  There is no public endpoint hosted for you. The Pages UI and docs are static. Start the
+  server locally with <code>nib serve --model nib.bin --tokenizer tokenizer.json --host
+  127.0.0.1 --port 8080</code> and use <code>http://127.0.0.1:8080</code>. After deploying,
+  the base URL is your HTTPS host, for example <code>https://api.example.com</code>, and
+  generation is always <code>POST {base}/api/generate</code>. The full walkthrough — local,
+  tunnel, public host, UI connection, and troubleshooting — is in
+  <a href="http-api.html#endpoint">HTTP API → What is the endpoint?</a>.
+</p>
+
 <h3>Does <code>serve</code> work with both models?</h3>
 <p>
   Yes. It reads the first eight bytes and dispatches to the Turbo int8 or dense int4 loader.

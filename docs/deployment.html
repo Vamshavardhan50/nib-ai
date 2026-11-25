@@ -106,6 +106,61 @@
   </p>
 </div>
 
+<h2 id="public-url">Get a public API URL — six steps</h2>
+<p>
+  This is the short version. The <a href="http-api.html#public-endpoint">HTTP API guide</a> has
+  the full endpoint walkthrough, tunnel instructions, UI connection, and troubleshooting.
+</p>
+<div class="steps">
+  <div class="step">
+    <div>
+      <h4>1. Build</h4>
+      <pre><code>cargo build --release</code></pre>
+    </div>
+  </div>
+  <div class="step">
+    <div>
+      <h4>2. Copy the three files</h4>
+      <p><code>nib</code>, <code>nib.bin</code> or <code>turbo.bin</code>, and <code>tokenizer.json</code>.</p>
+    </div>
+  </div>
+  <div class="step">
+    <div>
+      <h4>3. Run on <code>0.0.0.0</code></h4>
+      <pre><code>./nib serve --model nib.bin --tokenizer tokenizer.json --host 0.0.0.0 --port 8080</code></pre>
+    </div>
+  </div>
+  <div class="step">
+    <div>
+      <h4>4. Terminate HTTPS</h4>
+      <p>Use the platform's URL, or put Caddy/nginx in front of port 8080.</p>
+    </div>
+  </div>
+  <div class="step">
+    <div>
+      <h4>5. Test from outside</h4>
+      <pre><code>curl https://api.example.com/health
+curl -X POST https://api.example.com/api/generate \
+  -H "content-type: application/json" \
+  -d '{"prompt":"ROMEO: ","length":40}'</code></pre>
+    </div>
+  </div>
+  <div class="step">
+    <div>
+      <h4>6. Connect the UI</h4>
+      <pre><code>https://vamshavardhan50.github.io/nib-ai/?api=https://api.example.com</code></pre>
+    </div>
+  </div>
+</div>
+<div class="callout">
+  <strong>No public endpoint is included</strong>
+  <p>
+    The hosted UI and this documentation are static. They cannot execute Rust. Until you
+    complete these steps, the only working endpoint is <code>http://127.0.0.1:8080</code>
+    on your own machine.
+  </p>
+</div>
+
 <h2>Build once</h2>
 <pre><code>cargo build --release
 # binary: target/release/nib

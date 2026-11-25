@@ -177,7 +177,10 @@ println!("{out}");</code></pre>
 <p>
   The response is plain JSON with <code>text</code>, <code>prompt</code>, <code>length</code>,
   <code>temperature</code>, and <code>ms</code>. CORS is open, so a page on any origin can call
-  it. See the <a href="http-api.html">HTTP API reference</a> for every endpoint and error code.
+  it. This is a local endpoint by default; the hosted Pages UI has no backend. To get a public
+  HTTPS URL, use a tunnel for a demo or deploy the binary, then open the UI with
+  <code>?api=https://your-host</code>. See
+  <a href="http-api.html#endpoint">HTTP API → What is the endpoint?</a> for every step.
 </p>
 
 <h2>5. Put a generator on any website</h2>

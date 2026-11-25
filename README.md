@@ -8,6 +8,32 @@ Smallest binary, fastest CPU training/inference, easy integration for any develo
 
 **Full documentation:** [docs/index.html](docs/index.html) · [Getting started](docs/getting-started.html) · [What you can do](docs/use-cases.html) · [HTTP API](docs/http-api.html) · [Models & training](docs/models.html) · [Deployment](docs/deployment.html)
 
+## Introduction: what the model is about
+
+Nib is a **from-scratch character-level language model**. Give it up to 64 characters of text and it predicts the next character. Feed that prediction back in and it writes Shakespeare-style dialogue, code-like text, or whatever pattern its training corpus contains — one character at a time.
+
+It is deliberately **not a chatbot**. There is no attention, no instruction tuning, and no world knowledge. The goal is a complete language-model pipeline you can read end to end, train on a laptop CPU, compress into a small file, and embed in a CLI, a Rust program, an HTTP service, or any website.
+
+Nib ships two text artifacts from the same architecture family:
+
+- **TurboLM** — a low-rank model with a 100M-entry shape stored in **994,656 bytes**. Fast CPU demo.
+- **DenseLM** — a true dense model with **90,004,008 independent weights** stored in **45,117,066 bytes (45.12 MB)** at 4 bits. Every weight is real.
+
+| At a glance | |
+|-------------|---|
+| **Task** | Next-character prediction from a 64-character context |
+| **Dense architecture** | Embedding 62×128 → flatten 8,192 → Linear 8,192×10,902 → ReLU → Linear 10,902×62 → softmax |
+| **Turbo architecture** | Same MLP shape with low-rank `U·V` factors, rank 30 |
+| **Vocabulary** | 62 characters (newline, space, punctuation, upper/lowercase) |
+| **Training data** | First 200,000 bytes of Tiny Shakespeare (public domain) |
+| **Training** | Hand-written forward/backward passes, cross-entropy, SGD |
+| **Runtime** | CPU, single thread, no GPU, no Python |
+| **Interfaces** | CLI, Rust crate, HTTP JSON API, browser UI |
+
+**Good at:** continuing text in a learned local style, learning speaker labels and formatting from small corpora, running offline on a CPU, teaching the full training/quantization pipeline, and embedding a tiny model in an app.
+
+**Not built for:** question answering, reasoning, instructions, factual knowledge, long context (64 characters only), chat, tool use, streaming, or GPU-scale training.
+
 ## What "from scratch" means here
 
 | Component | Built from scratch? | Notes |
@@ -310,6 +336,56 @@ The same release binary can serve the model. No web framework, no Node, no Pytho
 
 Open <http://localhost:8080>. The page has a prompt box, length/temperature controls, copy button, and a ready-to-copy `<iframe>` embed. The server also exposes a JSON API with **CORS enabled**, so any website can call it.
 
+> **No public API is hosted for you.** The live UI and docs on GitHub Pages are static; they cannot run Rust. Until you start `nib serve` locally or deploy it, the only endpoint is `http://127.0.0.1:8080` on your own machine.
+
+### Where is the API endpoint?
+
+| Where the server runs | Base URL | Who can reach it |
+|-----------------------|----------|------------------|
+| Your machine (local only) | `http://127.0.0.1:8080` | Only that machine |
+| Your machine (LAN / Docker) | `http://192.168.1.20:8080` | Same network |
+| VPS or cloud service | `https://api.example.com` | Internet |
+| Temporary tunnel | `https://random-name.trycloudflare.com` | Internet while it runs |
+
+Generation is always `POST {base}/api/generate`.
+
+### Get a public endpoint
+
+```powershell
+# 1. Build once
+.\build.ps1 -Release
+
+# 2. Copy these three files to the host:
+#    nib (or nib.exe), nib.bin or turbo.bin, tokenizer.json
+
+# 3. Run on all interfaces
+./nib serve --model nib.bin --tokenizer tokenizer.json --host 0.0.0.0 --port 8080
+
+# 4. Put HTTPS in front (Caddy example) or use the platform's HTTPS URL
+# api.example.com {
+#     reverse_proxy 127.0.0.1:8080
+# }
+```
+
+Test from outside your network, then connect the static UI:
+
+```text
+https://vamshavardhan50.github.io/nib-ai/?api=https://api.example.com
+```
+
+For a quick demo without deploying, expose your local server through a tunnel:
+
+```powershell
+# Terminal 1
+.\target\release\nib serve --model turbo.bin --tokenizer tokenizer.json --host 127.0.0.1 --port 8080
+
+# Terminal 2 (prints an HTTPS URL)
+cloudflared tunnel --url http://127.0.0.1:8080
+# or: ngrok http 8080
+```
+
+The laptop must stay awake and the URL changes each run. Do not use a tunnel for production. Full endpoint walkthrough, host comparison, UI resolution order, and troubleshooting: [docs/http-api.html#endpoint](docs/http-api.html#endpoint).
+
 ### API
 
 | Method | Path | Purpose |
@@ -373,11 +449,21 @@ r = requests.post(
 print(r.json()["text"])
 ```
 
-Embed the whole demo on any site:
+Embed the whole demo on any site. If the API host also serves the UI:
 
 ```html
 <iframe
-  src="https://your-nib-host/"
+  src="https://your-api-host/"
+  width="100%" height="760"
+  style="border:0;border-radius:16px"
+  title="nib-rs language model"></iframe>
+```
+
+If the UI is the static GitHub Pages copy, pass the API host explicitly:
+
+```html
+<iframe
+  src="https://vamshavardhan50.github.io/nib-ai/?api=https://your-api-host"
   width="100%" height="760"
   style="border:0;border-radius:16px"
   title="nib-rs language model"></iframe>

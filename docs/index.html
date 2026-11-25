@@ -97,7 +97,73 @@
   </div>
 </section>
 
-<h2>What Nib is</h2>
+<h2 id="introduction">Introduction: what the model is about</h2>
+<p>
+  Nib is a <strong>from-scratch character-level language model</strong>. Give it up to 64
+  characters of text and it predicts the next character. Feed that prediction back in and it
+  writes Shakespeare-style dialogue, code-like text, or whatever pattern its training corpus
+  contains — one character at a time.
+</p>
+<p>
+  It is deliberately <strong>not a chatbot</strong> and not a general-purpose assistant. There
+  is no attention, no instruction tuning, and no world knowledge. The point is a complete
+  language-model pipeline you can read end to end, train on a laptop CPU, compress into a small
+  file, and embed in a CLI, a Rust program, an HTTP service, or any website.
+</p>
+<p>
+  Nib ships two text artifacts from the same architecture family. <strong>TurboLM</strong> is a
+  low-rank model with a 100M-entry shape stored in <strong>994,656 bytes</strong>.
+  <strong>DenseLM</strong> is a true dense model with <strong>90,004,008 independent
+  weights</strong> stored in <strong>45,117,066 bytes</strong> at 4 bits. Both use a 62-character
+  vocabulary and a 64-character context. Turbo is the fast interactive demo; Dense is the
+  artifact that actually stores every weight.
+</p>
+
+<h3>Model at a glance</h3>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Property</th><th>Value</th></tr></thead>
+  <tbody>
+    <tr><td>Task</td><td>Next-character prediction (causal character language modeling)</td></tr>
+    <tr><td>Input</td><td>64 character IDs</td></tr>
+    <tr><td>Dense architecture</td><td>Embedding 62×128 → flatten 8,192 → Linear 8,192×10,902 → ReLU → Linear 10,902×62 → softmax</td></tr>
+    <tr><td>Turbo architecture</td><td>Same MLP shape with low-rank <code>U·V</code> factors, rank 30</td></tr>
+    <tr><td>Vocabulary</td><td>62 characters: newline, space, punctuation, uppercase, lowercase</td></tr>
+    <tr><td>Context</td><td>64 characters; longer prompts are truncated from the left</td></tr>
+    <tr><td>Training data</td><td>First 200,000 bytes of Tiny Shakespeare (public domain)</td></tr>
+    <tr><td>Training</td><td>Hand-written forward/backward passes, cross-entropy loss, SGD</td></tr>
+    <tr><td>Dense artifact</td><td>90,004,008 weights · 45,117,066 bytes · 4-bit with row scales</td></tr>
+    <tr><td>Turbo artifact</td><td>100,009,068 logical / 994,572 stored · 994,656 bytes · int8</td></tr>
+    <tr><td>Runtime</td><td>CPU, single thread, <code>ndarray</code>; no GPU or Python</td></tr>
+    <tr><td>Interfaces</td><td>CLI, Rust crate, HTTP JSON API, embedded browser UI</td></tr>
+  </tbody>
+</table>
+</div>
+
+<div class="grid two">
+  <div class="card">
+    <h3>What it is good at</h3>
+    <ul>
+      <li>Continuing text in a learned local style and format.</li>
+      <li>Learning speaker labels, line breaks, spelling, and small-corpus patterns.</li>
+      <li>Running offline on a CPU with no GPU, Python, or model hub.</li>
+      <li>Teaching the full training and quantization pipeline in readable Rust.</li>
+      <li>Embedding a tiny text model in a website, CLI, or desktop app.</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h3>What it is not built for</h3>
+    <ul>
+      <li>Answering questions, reasoning, or following instructions.</li>
+      <li>General world knowledge or factual recall.</li>
+      <li>Long documents; the context is only 64 characters.</li>
+      <li>Chat, tool use, streaming, or multi-turn conversation.</li>
+      <li>GPU-scale training or production multi-tenant serving without a proxy.</li>
+    </ul>
+  </div>
+</div>
+
+<h2>Design principles</h2>
 <p>
   Nib is a deliberately small, readable implementation of the whole language-model pipeline.
   The tensor math, layers, backpropagation, optimizer, tokenizer, training loop, quantization,
@@ -220,6 +286,15 @@ curl -X POST http://127.0.0.1:8080/api/generate \
   roughly one to two orders of magnitude slower on CPU because every generated character
   touches all 90M weights.
 </p>
+<div class="callout">
+  <strong>No public API is attached to the hosted UI</strong>
+  <p>
+    GitHub Pages serves static files only. The live UI has no backend until you start
+    <code>nib serve</code> locally or deploy it to a Rust host. Local base URL:
+    <code>http://127.0.0.1:8080</code>. Public endpoint steps, tunnels, and UI connection:
+    <a href="http-api.html#endpoint">HTTP API → What is the endpoint?</a>.
+  </p>
+</div>
 
 <h2>How the pipeline fits together</h2>
 <div class="pipeline">
