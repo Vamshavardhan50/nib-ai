@@ -284,6 +284,12 @@ curl -X POST http://127.0.0.1:8080/api/generate \\
     <p>Ten concrete tasks — text, training, autocomplete, APIs, websites, images, compression — with the exact commands.</p>
     <div class="card-arrow">Find your use case →</div>
   </a>
+  <a class="card" href="features.html">
+    <span class="badge plain">Reference</span>
+    <h3>Features &amp; usage</h3>
+    <p>Every model, trainer, calculator, endpoint, UI option, Rust API, and deployment path with exact usage.</p>
+    <div class="card-arrow">See every feature →</div>
+  </a>
   <a class="card" href="cli.html">
     <span class="badge plain">Reference</span>
     <h3>CLI reference</h3>
@@ -549,6 +555,7 @@ curl http://127.0.0.1:8080/api/info</code></pre>
 <h2>Next steps</h2>
 <div class="grid two">
   <a class="card" href="use-cases.html"><h3>What you can do</h3><p>Ten practical recipes: text generation, custom training, autocomplete, APIs, websites, images, and compression.</p><div class="card-arrow">Find your use case →</div></a>
+  <a class="card" href="features.html"><h3>Features &amp; usage</h3><p>All four models, every command, API endpoint, UI option, and deployment path in one table.</p><div class="card-arrow">Browse features →</div></a>
   <a class="card" href="cli.html"><h3>CLI reference</h3><p>Every command and flag, including resume and prune recipes.</p><div class="card-arrow">Open reference →</div></a>
   <a class="card" href="http-api.html"><h3>HTTP API</h3><p>Request and response schemas, errors, CORS, and client examples.</p><div class="card-arrow">Open API docs →</div></a>
   <a class="card" href="models.html"><h3>Models &amp; training</h3><p>Architecture, size math, data provenance, and benchmarks.</p><div class="card-arrow">Read the deep dive →</div></a>
@@ -827,6 +834,447 @@ nib dense-train --input shakespeare.txt --output nib.bin --tokenizer tokenizer.j
   --tokenizer tokenizer.json --port 8080</code></pre>
     <p>Then POST to <code>/api/generate</code> from any origin.</p>
   </div>
+</div>
+`,
+  },
+  {
+    slug: "features",
+    title: "Features & usage",
+    description:
+      "Complete nib-rs feature guide: every model, training command, size calculator, HTTP endpoint, UI option, Rust API, vision feature, and deployment path with exact usage.",
+    body: `
+<section class="hero">
+  <p class="eyebrow">Feature guide</p>
+  <h1>Every feature, and exactly how to use it</h1>
+  <p class="lead">
+    A complete map of what ships in nib-rs: four model families, training and compression,
+    serving and embedding, vision, the Rust library, and operations. Every feature names the
+    command or API that activates it.
+  </p>
+  <div class="hero-actions">
+    <a class="btn" href="getting-started.html">Get started</a>
+    <a class="btn secondary" href="use-cases.html">Task recipes</a>
+    <a class="btn secondary" href="cli.html">CLI reference</a>
+  </div>
+</section>
+
+<h2 id="feature-map">Feature map</h2>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Area</th><th>Features</th><th>Jump to</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Models</strong></td><td>CharLM, TurboLM, DenseLM, VisionCNN</td><td><a href="#models">Four model families</a></td></tr>
+    <tr><td><strong>Text training</strong></td><td>From-scratch training, tokenizer building, resume, fine-tune, prune, sampling</td><td><a href="#text">Text training and generation</a></td></tr>
+    <tr><td><strong>Compression</strong></td><td>Low-rank Turbo, int8, dense 4-bit, size calculators, materialization</td><td><a href="#compression">Size planning and compression</a></td></tr>
+    <tr><td><strong>Serving</strong></td><td>HTTP JSON API, CORS, OpenAPI, browser UI, static export, iframe embedding, Docker</td><td><a href="#serving">Serving, UI, and embedding</a></td></tr>
+    <tr><td><strong>Vision</strong></td><td>CNN training, image classification, single-glyph recognition</td><td><a href="#vision">Vision</a></td></tr>
+    <tr><td><strong>Library</strong></td><td>Tensors, layers, optimizers, models, trainers, quantization, web, vision</td><td><a href="#library">Rust library</a></td></tr>
+    <tr><td><strong>Operations</strong></td><td>Release build, tests, docs build, Docker, Pages, benchmarks, memory</td><td><a href="#operations">Build, test, deploy</a></td></tr>
+  </tbody>
+</table>
+</div>
+
+<h2 id="models">Four model families</h2>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Model</th><th>What it is</th><th>Artifact</th><th>Commands</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><strong>CharLM</strong></td>
+      <td>A plain character-level MLP with JSON weights. Small, readable, fully configurable.</td>
+      <td><code>model.json</code></td>
+      <td><code>train</code>, <code>generate</code></td>
+    </tr>
+    <tr>
+      <td><strong>TurboLM</strong></td>
+      <td>A low-rank 100M-shape model. 994,572 independent stored weights, int8 on disk.</td>
+      <td><code>turbo.bin</code> · 994,656 bytes</td>
+      <td><code>turbo-info</code>, <code>turbo-train</code>, <code>turbo-generate</code></td>
+    </tr>
+    <tr>
+      <td><strong>DenseLM</strong></td>
+      <td>A true dense model: 90,004,008 independent weights, 4-bit on disk.</td>
+      <td><code>nib.bin</code> · 45,117,066 bytes</td>
+      <td><code>dense-info</code>, <code>dense-build</code>, <code>dense-train</code>, <code>dense-generate</code></td>
+    </tr>
+    <tr>
+      <td><strong>VisionCNN</strong></td>
+      <td>A convolutional image classifier. 1,898 weights at 16×16 with 10 classes.</td>
+      <td><code>vision.json</code></td>
+      <td><code>vision-train</code>, <code>vision-predict</code></td>
+    </tr>
+  </tbody>
+</table>
+</div>
+<p class="muted small">
+  All four start from random weights and learn from data you provide. No pre-trained checkpoint,
+  GGUF, ONNX file, or external model artifact is loaded.
+</p>
+
+<h2 id="text">Text training and generation</h2>
+
+<h3>CharLM: the readable baseline</h3>
+<p>
+  Use CharLM when you want to read or modify the whole pipeline. It is a plain MLP with JSON
+  weights, so you can inspect every number. It is the simplest model to read and modify, and the
+  best starting point for learning.
+</p>
+<pre><code>nib train --input shakespeare.txt --output model.json --tokenizer tokenizer.json --context 8 --hidden 64 --embed 16 --lr 0.1 --epochs 200 --optimizer sgd
+nib generate --model model.json --tokenizer tokenizer.json --seed "ROMEO: " --length 200 --temperature 0.8</code></pre>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Flag</th><th>Default</th><th>Use</th></tr></thead>
+  <tbody>
+    <tr><td><code>--context</code></td><td><code>8</code></td><td>Characters of history per prediction</td></tr>
+    <tr><td><code>--hidden</code></td><td><code>64</code></td><td>MLP hidden width</td></tr>
+    <tr><td><code>--embed</code></td><td><code>16</code></td><td>Character embedding width</td></tr>
+    <tr><td><code>--lr</code></td><td><code>0.1</code></td><td>Learning rate</td></tr>
+    <tr><td><code>--epochs</code></td><td><code>200</code></td><td>Training passes</td></tr>
+    <tr><td><code>--optimizer</code></td><td><code>sgd</code></td><td><code>sgd</code> or <code>adam</code></td></tr>
+  </tbody>
+</table>
+</div>
+
+<h3>TurboLM: the fast, compact model</h3>
+<p>
+  Turbo is the interactive choice. It keeps a 100M-entry shape as two low-rank factors (rank 30)
+  and stores them as int8, so the file is under 1 MB. Generation is roughly two orders of
+  magnitude cheaper than dense.
+</p>
+<pre><code>nib turbo-info --tokenizer tokenizer.json
+nib turbo-train --input shakespeare-200k.txt --output turbo.bin --tokenizer tokenizer.json --target 100000000 --context 64 --embed 128 --rank 30 --lr 0.05 --epochs 5 --batch-size 32 --max-samples 0
+nib turbo-generate --model turbo.bin --tokenizer tokenizer.json --seed "ROMEO: " --length 200 --temperature 0.7</code></pre>
+<p>Real <code>turbo-info</code> output for the shipped shape:</p>
+<pre><code>Turbo compact language model
+shape: vocab=62 context=64 embed=128 hidden=12114 rank=30
+logical (dense) parameters: 100009068 (100.01M)
+stored parameters:          994572 (0.995M)
+estimated file size:        994656 bytes (0.995 MB)
+dense f32 equivalent:       400.0 MB
+compression vs f32:         402x</code></pre>
+
+<h3>DenseLM: the real 90M-weight model</h3>
+<p>
+  Dense stores every weight, quantized to 4 bits with per-row scales. It is the artifact to use
+  when you need a genuine dense model under 50 MB, not a low-rank approximation. It is much
+  slower per character.
+</p>
+<pre><code>nib dense-info --tokenizer tokenizer.json --hidden 10902
+nib dense-build --turbo turbo.bin --output dense-100m.bin --tokenizer tokenizer.json
+nib dense-train --input shakespeare-200k.txt --output nib.bin --tokenizer tokenizer.json --init-dense dense-100m.bin --hidden 10902 --lr 0.02 --epochs 3 --batch-size 128 --max-samples 20000
+nib dense-generate --model nib.bin --tokenizer tokenizer.json --seed "ROMEO: " --length 120 --temperature 0.7</code></pre>
+<p>Real <code>dense-info</code> output for the shipped model:</p>
+<pre><code>Dense language model (4-bit)
+shape: vocab=62 context=64 embed=128 hidden=10902
+dense parameters:          90004008 (90.00M)
+4-bit file estimate:       45117066 bytes (45.12 MB)
+dense f32 equivalent:      360.0 MB</code></pre>
+
+<h3>Resume, fine-tune, and prune</h3>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Goal</th><th>Flags</th><th>Behavior</th></tr></thead>
+  <tbody>
+    <tr><td>Continue a dense checkpoint</td><td><code>--init-dense existing.bin</code></td><td>Loads the model and the tokenizer you pass; trains further</td></tr>
+    <tr><td>Prune then fine-tune</td><td><code>--init-dense big.bin --hidden 10902</code></td><td>Ranks hidden units by outgoing <code>fc2</code> row norm, keeps the strongest, restores order, then trains</td></tr>
+    <tr><td>Keep every hidden unit</td><td><code>--init-dense existing.bin --hidden 0</code></td><td>No pruning; pure continued training</td></tr>
+    <tr><td>Expand Turbo into dense</td><td><code>--init-turbo turbo.bin</code></td><td>Materializes the low-rank factors into dense matrices, then fine-tunes</td></tr>
+    <tr><td>Train from random weights</td><td><code>--target 100000000 --context 64 --embed 128</code></td><td>Builds a new tokenizer from the input text</td></tr>
+  </tbody>
+</table>
+</div>
+<div class="callout">
+  <strong>Tokenizer behavior</strong>
+  <p>
+    <code>train</code>, <code>turbo-train</code>, and random-init <code>dense-train</code> build a
+    character tokenizer from the input text and write it to <code>--tokenizer</code>. The
+    <code>--init-turbo</code> and <code>--init-dense</code> paths load the existing tokenizer and
+    require its vocabulary to match the model. Always generate with the tokenizer that belongs to
+    the model.
+  </p>
+</div>
+
+<h3>Sampling controls</h3>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Flag</th><th>Effect</th></tr></thead>
+  <tbody>
+    <tr><td><code>--seed</code></td><td>Prompt text. Short prompts are repeated to fill the context; long prompts keep the last 64 characters.</td></tr>
+    <tr><td><code>--length</code></td><td>Characters to generate.</td></tr>
+    <tr><td><code>--temperature</code></td><td>Lower is safer and more repetitive; higher is more random. 0.6–0.8 is a good start.</td></tr>
+    <tr><td><code>--model</code></td><td>Path to <code>model.json</code>, <code>turbo.bin</code>, or <code>nib.bin</code>.</td></tr>
+    <tr><td><code>--tokenizer</code></td><td>Must match the model vocabulary.</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h2 id="compression">Size planning and compression</h2>
+<p>
+  Two calculators let you check a configuration before spending time on training. Both are
+  instant and require no model file.
+</p>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Command</th><th>What it reports</th><th>Example</th></tr></thead>
+  <tbody>
+    <tr><td><code>nib turbo-info</code></td><td>Logical vs stored parameters, estimated file bytes, f32 equivalent, compression ratio</td><td><code>--target 100000000 --rank 30 --tokenizer tokenizer.json</code></td></tr>
+    <tr><td><code>nib dense-info</code></td><td>Dense parameter count and 4-bit file estimate for a hidden width</td><td><code>--hidden 10902 --tokenizer tokenizer.json</code></td></tr>
+    <tr><td><code>nib dense-build</code></td><td>Materializes Turbo factors into a true dense 4-bit file</td><td><code>--turbo turbo.bin --output dense-100m.bin</code></td></tr>
+  </tbody>
+</table>
+</div>
+<div class="grid two">
+  <div class="card">
+    <h3>Turbo format</h3>
+    <ul>
+      <li>Magic <code>CTURBO01</code></li>
+      <li>Int8 weights with per-row scales</li>
+      <li>994,656 bytes for the shipped shape</li>
+      <li>100.01M logical / 994,572 stored parameters</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h3>Dense format</h3>
+    <ul>
+      <li>Magic <code>CDENSE4\\0</code></li>
+      <li>4-bit weights with per-row scales</li>
+      <li>45,117,066 bytes for 90,004,008 weights</li>
+      <li>Fully dense matrices, not factors</li>
+    </ul>
+  </div>
+</div>
+<p>
+  A 100M dense model at 4 bits is 50,128,686 bytes, slightly over 50 MB. Pruning to 10,902 hidden
+  units gives 90,004,008 weights and 45,117,066 bytes. The 100M configuration remains available
+  with <code>dense-build</code> or a random-init <code>dense-train</code>.
+</p>
+
+<h2 id="serving">Serving, UI, and embedding</h2>
+<h3>Start the server</h3>
+<pre><code>nib serve --model turbo.bin --tokenizer tokenizer.json --host 0.0.0.0 --port 8080</code></pre>
+<p>
+  The server auto-detects Turbo or dense by the first eight bytes. It prints its URLs at startup.
+  Use <code>127.0.0.1</code> for local-only access and <code>0.0.0.0</code> in Docker or behind a
+  proxy.
+</p>
+
+<h3>Endpoints</h3>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Method</th><th>Path</th><th>Purpose</th><th>Notes</th></tr></thead>
+  <tbody>
+    <tr><td><code>GET</code></td><td><code>/</code></td><td>Browser UI</td><td>Single embedded HTML file</td></tr>
+    <tr><td><code>GET</code></td><td><code>/health</code></td><td>Liveness probe</td><td>Returns <code>{"status":"ok"}</code></td></tr>
+    <tr><td><code>GET</code></td><td><code>/api/info</code></td><td>Model metadata</td><td>Name, format, parameters, config, file size, endpoints</td></tr>
+    <tr><td><code>POST</code></td><td><code>/api/generate</code></td><td>Generate text</td><td>JSON body; <code>GET</code> returns 405</td></tr>
+    <tr><td><code>GET</code></td><td><code>/openapi.json</code></td><td>OpenAPI 3.1 document</td><td>For tooling and client generation</td></tr>
+    <tr><td><code>GET</code></td><td><code>/favicon.ico</code></td><td>Empty icon</td><td>204 No Content</td></tr>
+    <tr><td><code>OPTIONS</code></td><td>any path</td><td>CORS preflight</td><td>204 with <code>Access-Control-Allow-Origin: *</code></td></tr>
+  </tbody>
+</table>
+</div>
+
+<h3>Generation request</h3>
+<pre><code>curl -s -X POST http://127.0.0.1:8080/api/generate -H "content-type: application/json" -d '{"prompt":"ROMEO: ","length":80,"temperature":0.7}'</code></pre>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Field</th><th>Type</th><th>Default</th><th>Limits</th></tr></thead>
+  <tbody>
+    <tr><td><code>prompt</code></td><td>string</td><td>Built-in Shakespeare prompt</td><td>Max 4,096 characters</td></tr>
+    <tr><td><code>length</code></td><td>integer</td><td>300</td><td>Clamped to 1–2,000</td></tr>
+    <tr><td><code>temperature</code></td><td>number</td><td>0.8</td><td>Clamped to 0.01–2.0; non-finite falls back to 0.8</td></tr>
+  </tbody>
+</table>
+</div>
+<p>The request body is limited to 64 KB. The response shape is:</p>
+<pre><code>{"text":"...","prompt":"ROMEO: ","length":80,"temperature":0.7,"ms":123}</code></pre>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Response field</th><th>Meaning</th></tr></thead>
+  <tbody>
+    <tr><td><code>text</code></td><td>Prompt plus generated continuation</td></tr>
+    <tr><td><code>prompt</code></td><td>The prompt that was used</td></tr>
+    <tr><td><code>length</code></td><td>Effective, clamped length</td></tr>
+    <tr><td><code>temperature</code></td><td>Effective, clamped temperature</td></tr>
+    <tr><td><code>ms</code></td><td>Server-side generation time in milliseconds</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h3>Browser UI</h3>
+<ul>
+  <li>Prompt box, length and temperature controls, copy button.</li>
+  <li>Ready-to-copy <code>&lt;iframe&gt;</code> snippet.</li>
+  <li>Model badge from <code>/api/info</code>.</li>
+  <li>Endpoint resolution: <code>?api=</code> query, then <code>localStorage</code> key <code>nib-api</code>, then the page's own origin when it is served by <code>nib serve</code> on a non-static host; otherwise empty.</li>
+  <li>Static export with <code>nib web-export --output index.html</code>.</li>
+</ul>
+<pre><code>&lt;iframe src="https://your-api-host/" width="100%" height="760" style="border:0;border-radius:16px" title="nib-rs language model"&gt;&lt;/iframe&gt;</code></pre>
+<p>If the UI is the static Pages copy, pass the API host explicitly:</p>
+<pre><code>https://vamshavardhan50.github.io/nib-ai/?api=https://your-api-host</code></pre>
+
+<h3>Docker and public hosting</h3>
+<pre><code>docker build -t nib-turbo .
+docker run --rm -p 8080:8080 nib-turbo
+
+docker build --build-arg MODEL=nib.bin -t nib-dense .
+docker run --rm -p 8080:8080 --memory=1g nib-dense</code></pre>
+<div class="callout warn">
+  <strong>No public API is hosted for you</strong>
+  <p>
+    GitHub Pages serves the static UI and docs only. Start <code>nib serve</code> locally or
+    deploy it to a VPS, Render, Railway, Fly.io, Cloud Run, or Docker host. The full endpoint
+    walkthrough, tunnels, HTTPS, and UI connection steps are in
+    <a href="http-api.html#endpoint">HTTP API → What is the endpoint?</a>.
+  </p>
+</div>
+
+<h2 id="vision">Vision</h2>
+<p>
+  <code>VisionCNN</code> is a from-scratch convolutional classifier: one image in, one label and
+  one confidence out. It supports binary and small multi-class image classification. It is
+  <strong>not OCR</strong>: there is no detection, segmentation, or sequence decoder.
+</p>
+<pre><code>nib vision-train --manifest manifest.txt --output vision.json --image-size 32 --channels 3 --classes 2 --epochs 20 --batch-size 16 --lr 0.01
+nib vision-predict --model vision.json --image data/cats/new.jpg --classes classes.txt</code></pre>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Result</th><th>Value</th></tr></thead>
+  <tbody>
+    <tr><td>Held-out handwritten digits</td><td><strong>95.33%</strong> (286/300)</td></tr>
+    <tr><td>Training data</td><td>1,497 images, 10 classes, 16×16 grayscale</td></tr>
+    <tr><td>Training time</td><td>13.5 s for 30 epochs</td></tr>
+    <tr><td>Model file</td><td>49,200 bytes of JSON</td></tr>
+  </tbody>
+</table>
+</div>
+<p>
+  For the single-glyph OCR-adjacent recipe, failure modes, and production OCR alternatives, see
+  <a href="vision.html">Vision &amp; OCR</a>. Vision is CLI/Rust only;
+  <code>nib serve</code> does not load <code>vision.json</code>.
+</p>
+
+<h2 id="library">Rust library</h2>
+<pre><code>[dependencies]
+nib-rs = { git = "https://github.com/Vamshavardhan50/nib-ai.git" }
+
+# or a local checkout:
+# nib-rs = { path = "../nib-ai" }</code></pre>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Export</th><th>Use</th></tr></thead>
+  <tbody>
+    <tr><td><code>CharLM</code>, <code>ModelConfig</code>, <code>Tokenizer</code>, <code>Trainer</code></td><td>Plain character model, training, encode/decode</td></tr>
+    <tr><td><code>TurboLM</code>, <code>TurboConfig</code>, <code>TurboTrainer</code>, <code>generate_text</code></td><td>Compact low-rank model and sampling</td></tr>
+    <tr><td><code>dense::load_int4</code>, <code>dense::save_int4</code>, <code>dense::prune_hidden</code>, <code>DenseTrainer</code></td><td>Dense 4-bit model, pruning, training</td></tr>
+    <tr><td><code>Tensor1</code>, <code>Tensor2</code>, <code>Linear</code>, <code>Embedding</code>, <code>Init</code></td><td>From-scratch tensor and layer primitives</td></tr>
+    <tr><td><code>SGD</code>, <code>Adam</code></td><td>Optimizer hyperparameters</td></tr>
+    <tr><td><code>VisionCNN</code>, <code>VisionTrainer</code>, <code>load_image</code>, <code>load_manifest</code>, <code>Tensor4</code></td><td>Image classification and training</td></tr>
+    <tr><td><code>web::serve</code>, <code>web::index_html</code></td><td>Embed the HTTP server or the UI</td></tr>
+  </tbody>
+</table>
+</div>
+<pre><code>use nib_rs::{CharLM, ModelConfig, Tokenizer, Trainer};
+
+let tok = Tokenizer::from_text("hello world");
+let config = ModelConfig { vocab_size: tok.vocab_size(), ..Default::default() };
+let model = CharLM::new(config);
+let mut trainer = Trainer::new(model, "sgd".into(), 0.1);
+
+let ids = tok.encode("hello world");
+let ctx = ids[..trainer.model.config.context].to_vec();
+let target = ids[trainer.model.config.context];
+let loss = trainer.train_step(&amp;[(ctx, target)]);
+println!("loss: {loss:.4}");</code></pre>
+<pre><code>let mut model = nib_rs::dense::load_int4("nib.bin")?;
+let tok = Tokenizer::load("tokenizer.json")?;
+let text = nib_rs::dense::generate_text(&amp;mut model, &amp;tok, "ROMEO: ", 120, 0.7);
+println!("{text}");</code></pre>
+<pre><code>let mut model = nib_rs::VisionCNN::load("vision.json")?;
+let image = nib_rs::load_image("glyph.png", model.input_h, model.input_w, model.input_channels)?;
+let probs = model.predict(&amp;image);
+let (class, confidence) = probs.iter().enumerate().max_by(|a, b| a.1.partial_cmp(b.1).unwrap()).unwrap();
+println!("class {class} at {confidence:.4}");</code></pre>
+
+<h2 id="operations">Build, test, deploy</h2>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Task</th><th>Command</th><th>Result</th></tr></thead>
+  <tbody>
+    <tr><td>Release build</td><td><code>cargo build --release</code> or <code>.\\build.ps1 -Release</code></td><td><code>target/release/nib</code>, 3,041,792 bytes</td></tr>
+    <tr><td>Run tests</td><td><code>cargo test</code> or <code>.\\build.ps1 -Test</code></td><td>27 unit tests + 1 doc test</td></tr>
+    <tr><td>Build docs</td><td><code>node docs/build.mjs</code></td><td>Static HTML in <code>docs/</code></td></tr>
+    <tr><td>Static UI</td><td><code>nib web-export --output index.html</code></td><td>Hostable single-file UI</td></tr>
+    <tr><td>Docker</td><td><code>docker build --build-arg MODEL=nib.bin -t nib-dense .</code></td><td>Container on port 8080</td></tr>
+    <tr><td>Pages</td><td>Commit <code>index.html</code> and <code>docs/</code> to <code>main</code></td><td>UI and docs on GitHub Pages</td></tr>
+  </tbody>
+</table>
+</div>
+<p>
+  Windows builds use <code>build.ps1</code>, which adds MinGW and selects the GNU Rust toolchain.
+  Cargo is not assumed to be on the default PATH.
+</p>
+
+<h3>Measured performance</h3>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Workload</th><th>Result</th><th>Notes</th></tr></thead>
+  <tbody>
+    <tr><td>Turbo generation</td><td>200 characters in 150 ms</td><td>Through the HTTP API</td></tr>
+    <tr><td>Dense generation</td><td>20 characters in 1.7 s</td><td>Through the HTTP API</td></tr>
+    <tr><td>Dense generation</td><td>120 characters in ~11 s</td><td>CLI, ~90 ms/char</td></tr>
+    <tr><td>Dense fine-tune</td><td>~0.035 s/sample</td><td>Batch 128</td></tr>
+    <tr><td>Turbo memory</td><td>Under ~20 MB</td><td>Interactive demos</td></tr>
+    <tr><td>Dense memory</td><td>~360–400 MB</td><td>f32 weights; allow 1 GB in containers</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h2 id="limits">What it cannot do</h2>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Not supported</th><th>Reason or alternative</th></tr></thead>
+  <tbody>
+    <tr><td>Chat, question answering, instruction following</td><td>Character-level next-token model with no instruction tuning</td></tr>
+    <tr><td>World knowledge or factual recall</td><td>Only patterns in the training corpus</td></tr>
+    <tr><td>Long context</td><td>64 characters; longer prompts keep the last 64</td></tr>
+    <tr><td>OCR or reading text from photos</td><td>Single-label CNN only; use Tesseract, PaddleOCR, EasyOCR, or docTR</td></tr>
+    <tr><td>Object detection or segmentation</td><td>The vision model classifies a whole crop</td></tr>
+    <tr><td>GPU training or inference</td><td>CPU, single thread, <code>ndarray</code></td></tr>
+    <tr><td>Token streaming</td><td>The API returns the full string</td></tr>
+    <tr><td>Built-in auth, TLS, or rate limiting</td><td>Put a reverse proxy in front</td></tr>
+    <tr><td>100B parameters under 100 MB</td><td>Physically impossible: 100B at 1 bit is ~12.5 GB</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h2 id="chooser">Pick a feature by goal</h2>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>I want to…</th><th>Use</th><th>Start with</th></tr></thead>
+  <tbody>
+    <tr><td>Generate text quickly on CPU</td><td>TurboLM</td><td><code>nib turbo-generate --model turbo.bin --tokenizer tokenizer.json</code></td></tr>
+    <tr><td>Use every one of 90M dense weights</td><td>DenseLM</td><td><code>nib dense-generate --model nib.bin --tokenizer tokenizer.json</code></td></tr>
+    <tr><td>Train on my own notes, lyrics, code, or logs</td><td>Any text trainer</td><td><code>nib turbo-train --input mydata.txt --output my-turbo.bin</code></td></tr>
+    <tr><td>Continue an existing dense run</td><td><code>dense-train --init-dense</code></td><td><code>--init-dense nib.bin --epochs 1</code></td></tr>
+    <tr><td>Shrink a dense model</td><td>Pruning</td><td><code>--init-dense big.bin --hidden 10902</code></td></tr>
+    <tr><td>Check a size before training</td><td>Size calculators</td><td><code>nib dense-info --hidden 10902</code></td></tr>
+    <tr><td>Add a JSON API</td><td><code>nib serve</code></td><td><code>POST /api/generate</code></td></tr>
+    <tr><td>Put a generator on a website</td><td>Static UI + CORS</td><td><code>nib web-export</code>, then <code>?api=https://your-host</code></td></tr>
+    <tr><td>Embed in a Rust application</td><td><code>nib-rs</code> crate</td><td><code>dense::load_int4</code> + <code>generate_text</code></td></tr>
+    <tr><td>Classify images</td><td>VisionCNN</td><td><code>nib vision-train --manifest manifest.txt</code></td></tr>
+    <tr><td>Read text from a photo</td><td>Not supported</td><td>Use Tesseract or PaddleOCR</td></tr>
+    <tr><td>Ship one binary or container</td><td>Release build or Docker</td><td><code>docker build --build-arg MODEL=nib.bin -t nib-dense .</code></td></tr>
+  </tbody>
+</table>
+</div>
+
+<h2>Next steps</h2>
+<div class="grid two">
+  <a class="card" href="getting-started.html"><h3>Getting started</h3><p>Install, build, and run the shipped model in five minutes.</p><div class="card-arrow">Start here →</div></a>
+  <a class="card" href="use-cases.html"><h3>Task recipes</h3><p>Ten concrete tasks with real output and caveats.</p><div class="card-arrow">Find a recipe →</div></a>
+  <a class="card" href="cli.html"><h3>CLI reference</h3><p>Every command and flag in one place.</p><div class="card-arrow">Open the reference →</div></a>
+  <a class="card" href="http-api.html"><h3>HTTP API</h3><p>Endpoints, limits, clients, and public deployment.</p><div class="card-arrow">Call the API →</div></a>
 </div>
 `,
   },

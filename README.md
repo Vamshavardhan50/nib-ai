@@ -6,7 +6,7 @@ Smallest binary, fastest CPU training/inference, easy integration for any develo
 
 **Live:** [Browser UI](https://vamshavardhan50.github.io/nib-ai/) · [Documentation](https://vamshavardhan50.github.io/nib-ai/docs/)
 
-**Full documentation:** [docs/index.html](docs/index.html) · [Getting started](docs/getting-started.html) · [What you can do](docs/use-cases.html) · [Vision & OCR](docs/vision.html) · [HTTP API](docs/http-api.html) · [Models & training](docs/models.html) · [Deployment](docs/deployment.html)
+**Full documentation:** [docs/index.html](docs/index.html) · [Getting started](docs/getting-started.html) · [What you can do](docs/use-cases.html) · [Features & usage](docs/features.html) · [Vision & OCR](docs/vision.html) · [HTTP API](docs/http-api.html) · [Models & training](docs/models.html) · [Deployment](docs/deployment.html)
 
 ## Introduction: what the model is about
 
@@ -59,22 +59,196 @@ No external `.gguf` or pre-trained `.bin`, no Hugging Face download. Models begi
 | **TurboLM** | Text generation, <1 MB | Any real `.txt` file | `turbo-train` / `turbo-generate` / `serve` |
 | **DenseLM** | Text generation, true 90M weights, 45 MB | Any real `.txt` file | `dense-train` / `dense-generate` / `serve` |
 
-## What you can do with it — and how
+## Features and how to use them
 
-| Problem | Feature | How to use it |
-|---------|---------|---------------|
+Everything below ships in this repository and runs on CPU. Each feature names the command or API that activates it. The full guide, with real output and caveats, is on the docs site: [Features & usage](docs/features.html).
+
+| I want to... | Feature | Command or API |
+|--------------|---------|----------------|
 | Continue text offline in a learned style | Turbo / Dense generation | `nib turbo-generate --model turbo.bin --tokenizer tokenizer.json --seed "ROMEO: "` |
-| Use every one of 90M dense weights | Dense 4-bit model | `nib dense-generate --model nib.bin --tokenizer tokenizer.json --seed "First Citizen: ..."` |
-| Train on your own notes, lyrics, code, or logs | CharLM, Turbo, or Dense training | `nib train --input mydata.txt --output model.json --tokenizer tokenizer.json` |
-| Build a next-character predictor / autocomplete | Rust `predict` + `sample` | `dense::load_int4("nib.bin")`, then `model.predict(&ctx)` |
-| Add text generation to a website | Static UI + CORS API | `nib web-export`, host `index.html`, open `?api=https://your-api-host` |
+| Use every one of 90M dense weights | Dense 4-bit model | `nib dense-generate --model nib.bin --tokenizer tokenizer.json --seed "First Citizen: "` |
+| Train on my own notes, lyrics, code, or logs | CharLM, Turbo, or Dense training | `nib turbo-train --input mydata.txt --output my-turbo.bin` |
+| Continue or fine-tune a dense checkpoint | `--init-dense` | `nib dense-train --init-dense nib.bin --epochs 1` |
+| Shrink a dense model | Prune + fine-tune | `nib dense-train --init-dense big.bin --hidden 10902` |
+| Expand Turbo into true dense weights | `dense-build` | `nib dense-build --turbo turbo.bin --output dense-100m.bin` |
+| Check a size before training | Instant size calculators | `nib turbo-info` / `nib dense-info --hidden 10902` |
 | Serve a JSON API to any client | Zero-dependency HTTP server | `nib serve --model turbo.bin --tokenizer tokenizer.json --port 8080` |
+| Probe or inspect a running server | Health, info, OpenAPI | `GET /health`, `GET /api/info`, `GET /openapi.json` |
+| Add text generation to a website | Static UI + CORS API | `nib web-export`, host `index.html`, open `?api=https://your-api-host` |
+| Embed a generator in any page | Iframe snippet | `<iframe src="https://your-api-host/">` |
 | Embed the model in a Rust app | `nib-rs` crate | `nib-rs = { git = "https://github.com/Vamshavardhan50/nib-ai.git" }` |
-| Deploy with one artifact | Docker / single binary | `docker build --build-arg MODEL=nib.bin -t nib-dense .` |
 | Classify small image sets (not OCR) | VisionCNN | `nib vision-train --manifest manifest.txt --output vision.json` |
-| Read text from a photo (OCR) | Not supported | Nib classifies one pre-cropped glyph; use Tesseract/PaddleOCR for full OCR |
-| Choose a size before training | Instant size calculators | `nib turbo-info` / `nib dense-info --hidden 10902` |
+| Recognize one pre-cropped glyph | VisionCNN, 62 classes | Train `0-9 A-Z a-z`, then `nib vision-predict` per crop |
+| Read text from a photo (OCR) | Not supported | Nib classifies one crop; use Tesseract/PaddleOCR for full OCR |
+| Deploy with one artifact | Docker / single binary | `docker build --build-arg MODEL=nib.bin -t nib-dense .` |
 | Learn how an LM works end to end | Hand-written layers and backprop | Read `src/model.rs`, `src/dense.rs`, `src/turbo.rs`; run `cargo test` |
+
+### The four models
+
+| Model | Task | Artifact | Commands |
+|-------|------|----------|----------|
+| **CharLM** | Readable character-level MLP | `model.json` (JSON) | `train`, `generate` |
+| **TurboLM** | Fast low-rank text model | `turbo.bin` · 994,656 bytes · 100.01M logical / 994,572 stored | `turbo-info`, `turbo-train`, `turbo-generate` |
+| **DenseLM** | True dense text model | `nib.bin` · 45,117,066 bytes · 90,004,008 weights | `dense-info`, `dense-build`, `dense-train`, `dense-generate` |
+| **VisionCNN** | Single-label image classifier | `vision.json` (JSON) | `vision-train`, `vision-predict` |
+
+All four start from random weights and learn from data you provide. No pre-trained checkpoint, GGUF, ONNX file, or external model artifact is loaded.
+
+### Text: train and generate
+
+**CharLM — the readable baseline.** A plain MLP with JSON weights, so every number is inspectable. It is the simplest model to read and modify, and the best starting point for learning and small experiments.
+
+```powershell
+nib train --input shakespeare.txt --output model.json --tokenizer tokenizer.json --context 8 --hidden 64 --embed 16 --lr 0.1 --epochs 200 --optimizer sgd
+nib generate --model model.json --tokenizer tokenizer.json --seed "ROMEO: " --length 200 --temperature 0.8
+```
+
+**TurboLM — the fast, compact model.** Keeps a 100M-entry shape as two low-rank factors (rank 30) and stores them as int8, so the file is under 1 MB. Generation is roughly two orders of magnitude cheaper than dense.
+
+```powershell
+nib turbo-info --tokenizer tokenizer.json
+nib turbo-train --input shakespeare-200k.txt --output turbo.bin --tokenizer tokenizer.json --target 100000000 --context 64 --embed 128 --rank 30 --lr 0.05 --epochs 5 --batch-size 32 --max-samples 0
+nib turbo-generate --model turbo.bin --tokenizer tokenizer.json --seed "ROMEO: " --length 200 --temperature 0.7
+```
+
+**DenseLM — the real 90M-weight model.** Stores every weight, quantized to 4 bits with per-row scales. Use it when you need a genuine dense model under 50 MB; it is much slower per character.
+
+```powershell
+nib dense-info --tokenizer tokenizer.json --hidden 10902
+nib dense-build --turbo turbo.bin --output dense-100m.bin --tokenizer tokenizer.json
+nib dense-train --input shakespeare-200k.txt --output nib.bin --tokenizer tokenizer.json --init-dense dense-100m.bin --hidden 10902 --lr 0.02 --epochs 3 --batch-size 128 --max-samples 20000
+nib dense-generate --model nib.bin --tokenizer tokenizer.json --seed "ROMEO: " --length 120 --temperature 0.7
+```
+
+**Resume, fine-tune, and prune:**
+
+| Goal | Flags | Behavior |
+|------|-------|----------|
+| Continue a dense checkpoint | `--init-dense existing.bin` | Loads the model and tokenizer; trains further |
+| Prune then fine-tune | `--init-dense big.bin --hidden 10902` | Ranks hidden units by outgoing `fc2` row norm, keeps the strongest, restores order, then trains |
+| Keep every hidden unit | `--init-dense existing.bin --hidden 0` | No pruning; pure continued training |
+| Expand Turbo into dense | `--init-turbo turbo.bin` | Materializes the low-rank factors into dense matrices, then fine-tunes |
+| Train from random weights | `--target 100000000 --context 64 --embed 128` | Builds a new tokenizer from the input text |
+
+`train`, `turbo-train`, and random-init `dense-train` build a character tokenizer from the input text and write it to `--tokenizer`. The `--init-turbo` and `--init-dense` paths load the existing tokenizer and require its vocabulary to match the model. Always generate with the tokenizer that belongs to the model.
+
+**Sampling:** `--seed` is the prompt. Short prompts are repeated to fill the 64-character context; long prompts keep the last 64 characters. `--length` is the number of characters to generate. `--temperature` controls randomness: lower is safer and more repetitive, higher is more random, and 0.6–0.8 is a good start.
+
+### Size planning and compression
+
+Two calculators are instant and need no model file:
+
+| Command | Reports | Example |
+|---------|---------|---------|
+| `nib turbo-info` | Logical vs stored parameters, estimated bytes, f32 equivalent, compression ratio | `nib turbo-info --target 100000000 --rank 30 --tokenizer tokenizer.json` |
+| `nib dense-info` | Dense parameter count and 4-bit file estimate | `nib dense-info --hidden 10902 --tokenizer tokenizer.json` |
+| `nib dense-build` | Materializes Turbo factors into a true dense 4-bit file | `nib dense-build --turbo turbo.bin --output dense-100m.bin` |
+
+Real output for the shipped shapes:
+
+```text
+Turbo: 100,009,068 logical / 994,572 stored parameters -> 994,656 bytes (0.995 MB), 402x smaller than f32
+Dense: 90,004,008 parameters -> 45,117,066 bytes (45.12 MB), 360 MB at f32
+```
+
+A 100M dense model at 4 bits is 50,128,686 bytes, slightly over 50 MB. Pruning to 10,902 hidden units gives 90,004,008 weights and 45,117,066 bytes. The 100M configuration remains available with `dense-build` or random-init `dense-train`.
+
+### HTTP API, browser UI, and embedding
+
+```powershell
+nib serve --model turbo.bin --tokenizer tokenizer.json --host 0.0.0.0 --port 8080
+```
+
+The server auto-detects Turbo (`CTURBO01`) or dense (`CDENSE4`) by the first eight bytes. Use `127.0.0.1` for local-only access and `0.0.0.0` in Docker or behind a proxy.
+
+| Method | Path | Purpose | Notes |
+|--------|------|---------|-------|
+| `GET` | `/` | Browser UI | Single embedded HTML file |
+| `GET` | `/health` | Liveness probe | `{"status":"ok"}` |
+| `GET` | `/api/info` | Model metadata | Name, format, parameters, config, file size, endpoints |
+| `POST` | `/api/generate` | Generate text | JSON body; `GET` returns 405 |
+| `GET` | `/openapi.json` | OpenAPI 3.1 document | For tooling and client generation |
+| `GET` | `/favicon.ico` | Empty icon | 204 No Content |
+| `OPTIONS` | any path | CORS preflight | 204 with `Access-Control-Allow-Origin: *` |
+
+```powershell
+curl -s -X POST http://127.0.0.1:8080/api/generate -H "content-type: application/json" -d '{"prompt":"ROMEO: ","length":80,"temperature":0.7}'
+```
+
+Request fields: `prompt` (string, default built-in Shakespeare prompt, max 4,096 characters), `length` (integer, default 300, clamped to 1–2,000), `temperature` (number, default 0.8, clamped to 0.01–2.0). The body limit is 64 KB. The response is:
+
+```json
+{"text":"...","prompt":"ROMEO: ","length":80,"temperature":0.7,"ms":123}
+```
+
+`text` includes the prompt plus the continuation.
+
+**Browser UI:** `nib serve` serves the UI at `/`. To host it separately, run `nib web-export --output index.html` and open it with `?api=https://your-api-host`. The UI resolves the endpoint from `?api=`, then the `localStorage` key `nib-api`, then its own origin when it is served by `nib serve` on a non-static host; otherwise it stays empty.
+
+```html
+<iframe src="https://your-api-host/" width="100%" height="760" style="border:0;border-radius:16px" title="nib-rs language model"></iframe>
+```
+
+No public API is hosted for you: GitHub Pages serves the static UI and docs only. Start `nib serve` locally or deploy it to a VPS, Render, Railway, Fly.io, Cloud Run, or Docker host. Full walkthrough: [HTTP API -> What is the endpoint?](docs/http-api.html#endpoint).
+
+### Vision
+
+`VisionCNN` is a from-scratch convolutional classifier: one image in, one label and one confidence out. It handles binary and small multi-class image classification. It is **not OCR**: there is no detection, segmentation, or sequence decoder.
+
+```powershell
+nib vision-train --manifest manifest.txt --output vision.json --image-size 32 --channels 3 --classes 2 --epochs 20 --batch-size 16 --lr 0.01
+nib vision-predict --model vision.json --image data/cats/new.jpg --classes classes.txt
+```
+
+Manifest lines are `path label`; `classes.txt` has one name per line in label order. Measured on UCI handwritten digits (1,497 train / 300 held out, 16×16 grayscale, 30 epochs): **95.33% held-out accuracy (286/300)**, 13.5 s training, 49,200-byte model. For the single-glyph OCR-adjacent recipe, failure modes, and production OCR alternatives, see [Vision & OCR](docs/vision.html). Vision is CLI/Rust only; `nib serve` does not load `vision.json`.
+
+### Rust library
+
+```toml
+[dependencies]
+nib-rs = { git = "https://github.com/Vamshavardhan50/nib-ai.git" }
+```
+
+| Export | Use |
+|--------|-----|
+| `CharLM`, `ModelConfig`, `Tokenizer`, `Trainer` | Plain character model, training, encode/decode |
+| `TurboLM`, `TurboConfig`, `TurboTrainer`, `generate_text` | Compact low-rank model and sampling |
+| `dense::load_int4`, `dense::save_int4`, `dense::prune_hidden`, `DenseTrainer` | Dense 4-bit model, pruning, training |
+| `Tensor1`, `Tensor2`, `Linear`, `Embedding`, `Init`, `SGD`, `Adam` | Tensor, layer, and optimizer primitives |
+| `VisionCNN`, `VisionTrainer`, `load_image`, `load_manifest`, `Tensor4` | Image classification and training |
+| `web::serve`, `web::index_html` | Embed the HTTP server or the UI |
+
+```rust
+let mut model = nib_rs::dense::load_int4("nib.bin")?;
+let tok = nib_rs::Tokenizer::load("tokenizer.json")?;
+let text = nib_rs::dense::generate_text(&mut model, &tok, "ROMEO: ", 120, 0.7);
+println!("{text}");
+```
+
+### Build, test, docs, and deploy
+
+| Task | Command | Result |
+|------|---------|--------|
+| Release build | `cargo build --release` or `.\build.ps1 -Release` | `target/release/nib`, 3,041,792 bytes |
+| Run tests | `cargo test` or `.\build.ps1 -Test` | 27 unit tests + 1 doc test |
+| Build docs | `node docs/build.mjs` | 11 static HTML pages in `docs/` |
+| Static UI | `nib web-export --output index.html` | Hostable single-file UI |
+| Docker | `docker build --build-arg MODEL=nib.bin -t nib-dense .` | Container on port 8080 |
+| Pages | Commit `index.html` and `docs/` to `main` | UI and docs on GitHub Pages |
+
+### What it cannot do
+
+| Not supported | Reason or alternative |
+|---------------|-----------------------|
+| Chat, question answering, instruction following | Character-level next-token model with no instruction tuning |
+| World knowledge or factual recall | Only patterns in the training corpus |
+| Long context | 64 characters; longer prompts keep the last 64 |
+| OCR or reading text from photos | Single-label CNN only; use Tesseract, PaddleOCR, EasyOCR, or docTR |
+| Object detection or segmentation | The vision model classifies a whole crop |
+| GPU training or inference | CPU, single thread, `ndarray` |
+| Token streaming | The API returns the full string |
+| Built-in auth, TLS, or rate limiting | Put a reverse proxy in front |
+| 100B parameters under 100 MB | Physically impossible: 100B at 1 bit is ~12.5 GB |
 
 **What it is not:** a chatbot, an instruction-following assistant, or a source of world knowledge. It is a character-level model trained on real text. It does not answer questions, use tools, stream tokens, or handle long contexts, and it runs on CPU only. Full recipes, real sample output, and caveats: [docs/use-cases.html](docs/use-cases.html).
 
