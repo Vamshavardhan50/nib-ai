@@ -6,7 +6,7 @@ Smallest binary, fastest CPU training/inference, easy integration for any develo
 
 **Live:** [Browser UI](https://vamshavardhan50.github.io/nib-ai/) · [Documentation](https://vamshavardhan50.github.io/nib-ai/docs/)
 
-**Full documentation:** [docs/index.html](docs/index.html) · [Getting started](docs/getting-started.html) · [What you can do](docs/use-cases.html) · [HTTP API](docs/http-api.html) · [Models & training](docs/models.html) · [Deployment](docs/deployment.html)
+**Full documentation:** [docs/index.html](docs/index.html) · [Getting started](docs/getting-started.html) · [What you can do](docs/use-cases.html) · [Vision & OCR](docs/vision.html) · [HTTP API](docs/http-api.html) · [Models & training](docs/models.html) · [Deployment](docs/deployment.html)
 
 ## Introduction: what the model is about
 
@@ -32,7 +32,7 @@ Nib ships two text artifacts from the same architecture family:
 
 **Good at:** continuing text in a learned local style, learning speaker labels and formatting from small corpora, running offline on a CPU, teaching the full training/quantization pipeline, and embedding a tiny model in an app.
 
-**Not built for:** question answering, reasoning, instructions, factual knowledge, long context (64 characters only), chat, tool use, streaming, or GPU-scale training.
+**Not built for:** question answering, reasoning, instructions, factual knowledge, long context (64 characters only), chat, tool use, streaming, OCR, or GPU-scale training.
 
 ## What "from scratch" means here
 
@@ -71,7 +71,8 @@ No external `.gguf` or pre-trained `.bin`, no Hugging Face download. Models begi
 | Serve a JSON API to any client | Zero-dependency HTTP server | `nib serve --model turbo.bin --tokenizer tokenizer.json --port 8080` |
 | Embed the model in a Rust app | `nib-rs` crate | `nib-rs = { git = "https://github.com/Vamshavardhan50/nib-ai.git" }` |
 | Deploy with one artifact | Docker / single binary | `docker build --build-arg MODEL=nib.bin -t nib-dense .` |
-| Classify small image sets | VisionCNN | `nib vision-train --manifest manifest.txt --output vision.json` |
+| Classify small image sets (not OCR) | VisionCNN | `nib vision-train --manifest manifest.txt --output vision.json` |
+| Read text from a photo (OCR) | Not supported | Nib classifies one pre-cropped glyph; use Tesseract/PaddleOCR for full OCR |
 | Choose a size before training | Instant size calculators | `nib turbo-info` / `nib dense-info --hidden 10902` |
 | Learn how an LM works end to end | Hand-written layers and backprop | Read `src/model.rs`, `src/dense.rs`, `src/turbo.rs`; run `cargo test` |
 
@@ -105,7 +106,7 @@ cd nib-ai
 cargo build --release
 ```
 
-**Verified:** release binary = **3,041,792 bytes (3.04 MB / 2.90 MiB)**, 27 unit tests + 1 doc test pass, CharLM loss 2.35 → 1.46 (40 epochs), Turbo loss 2.32 → 1.78 (5 epochs), Turbo = **100.01M logical / 994,656-byte file**, DenseLM = **90,004,008 weights / 45,117,066-byte file**, 100M dense fine-tune loss **1.5755 → 1.5290** (2 epochs), pruned 90M fine-tune loss **1.5311 → 1.5154, best epoch 1.5079** (3 epochs), HTTP generate roundtrip + CORS verified, vision loss drops → 0.02, red/blue classification 98%+ confidence.
+**Verified:** release binary = **3,041,792 bytes (3.04 MB / 2.90 MiB)**, 27 unit tests + 1 doc test pass, CharLM loss 2.35 → 1.46 (40 epochs), Turbo loss 2.32 → 1.78 (5 epochs), Turbo = **100.01M logical / 994,656-byte file**, DenseLM = **90,004,008 weights / 45,117,066-byte file**, 100M dense fine-tune loss **1.5755 → 1.5290** (2 epochs), pruned 90M fine-tune loss **1.5311 → 1.5154, best epoch 1.5079** (3 epochs), HTTP generate roundtrip + CORS verified, digit CNN **95.33% held-out (286/300)** after 30 epochs in 13.5 s.
 
 ---
 
@@ -538,6 +539,27 @@ The Turbo model is only ~1 MB and needs a few MB of RAM. The dense model is 45.1
 
 ## Vision model (real images)
 
+Nib also includes a from-scratch convolutional classifier for images. It is a **single-label classifier**: one image in, one class and one confidence out.
+
+**Measured on real data:** 10-class handwritten digits, 1,497 training images and 300 held-out images at 16×16 grayscale — **95.33% held-out accuracy (286/300)**, 30 epochs in **13.5 s**, model file **49,200 bytes**.
+
+### What you can do
+
+| Task | Setup |
+|------|-------|
+| Cat vs dog, pass vs fail, defect vs clean | 2 classes, 32×32 RGB |
+| Digits, shapes, symbols, product categories | 3–20 classes, 16×16 to 32×32 |
+| Single cropped character (OCR-adjacent) | 62 classes, 32×32 grayscale, fixed font |
+| Simple visual inspection | 2 classes, consistent camera and lighting |
+
+### OCR is not built in
+
+The CNN returns **one label for the whole image**. It has no text detection, no line or character segmentation, no sequence decoder, and no language model. A photo of a receipt or a sentence is one input, not a string.
+
+You can build a **single-glyph classifier**: crop each character yourself with OpenCV/PIL/ImageMagick, train on `0-9 A-Z a-z` (62 classes), then classify each crop and join the results. This works only for clean, fixed-font, pre-cropped glyphs. It fails on handwriting, multiple fonts, skew, touching characters, and full pages.
+
+For production OCR use Tesseract, PaddleOCR, EasyOCR, docTR, or a cloud vision API. Full guide, measured example, and caveats: [docs/vision.html](docs/vision.html).
+
 ### 1. Prepare a manifest
 
 Create `manifest.txt` with one `image_path label` pair per line:
@@ -549,14 +571,28 @@ data/dogs/001.jpg 1
 data/dogs/002.jpg 1
 ```
 
-- `label` is a class index starting at `0`.
+- `label` is a class index starting at `0`, and must be less than `--classes`.
 - Paths may contain spaces (label is the last token).
-- Lines starting with `#` are ignored.
+- Lines starting with `#` and blank lines are ignored.
+- Images are resized to `--image-size`, converted to `--channels`, and normalized to `[0,1]`.
+- There is no automatic train/test split and no augmentation.
 
 ### 2. Train
 
 ```powershell
-.\target\release\nib vision-train --manifest manifest.txt --output vision.json --classes 2 --image-size 32 --epochs 20
+.\target\release\nib vision-train --manifest manifest.txt --output vision.json --classes 2 --image-size 32 --channels 3 --epochs 20
+```
+
+Real digit run (10 classes, 16×16 grayscale, 1,497 images):
+
+```
+vision training: 1497 images, 10 classes, 1x16x16, epochs=30, lr=0.01, batch=16
+epoch 0/30 loss: 2.1589
+epoch 1/30 loss: 1.6572
+epoch 2/30 loss: 1.2281
+...
+epoch 29/30 loss: 0.1267
+vision model saved to vision.json
 ```
 
 ### 3. Predict
@@ -565,7 +601,22 @@ data/dogs/002.jpg 1
 .\target\release\nib vision-predict --model vision.json --image data/cats/new.jpg --classes classes.txt
 ```
 
-`classes.txt` is optional — one class name per line (line 0 = class 0, etc.).
+```
+prediction: 0 (class 0)
+confidence: 0.9998
+```
+
+`classes.txt` is optional — one class name per line (line 0 = class 0, etc.). The CLI prints top-1 only; the Rust API returns all class probabilities. Vision is CLI/Rust only: `nib serve` loads text models (`CTURBO01`, `CDENSE4`), not `vision.json`.
+
+### Tuning
+
+| Goal | Change |
+|------|--------|
+| More detail (fonts, small defects) | Raise `--image-size` to 32 or 48 |
+| Color matters (ripe/unripe, red/blue) | `--channels 3` |
+| Faster training | 16×16, grayscale, fewer epochs |
+| Loss stuck at `ln(classes)` | Check labels, raise `--lr`, verify images differ |
+| Loss is suspiciously 0 | A label is outside `0..classes-1`; out-of-range labels are silently skipped |
 
 ### Vision architecture (all hand-written)
 

@@ -60,6 +60,7 @@
         <a href="cli.html">CLI reference</a>
         <a href="http-api.html">HTTP API</a>
         <a href="rust-api.html">Rust API</a>
+        <a href="vision.html">Vision &amp; OCR</a>
         <a href="models.html">Models &amp; training</a>
         <a href="deployment.html">Deployment</a>
         <a href="faq.html">FAQ</a>
@@ -231,7 +232,7 @@ docker run --rm -p 8080:8080 --memory=1g nib-dense</code></pre>
   platform-specific settings.
 </p>
 
-<h2>8. Classify images with the CNN</h2>
+<h2 id="classify-images">8. Classify images with the CNN</h2>
 <p><strong>The problem:</strong> you want a from-scratch convolutional classifier for a small, controlled image set — shapes, colors, symbols, simple objects.</p>
 <pre><code># manifest.txt: one "path label" pair per line
 # data/red/01.png 0
@@ -246,6 +247,12 @@ nib vision-predict --model vision.json --image data/red/02.png \
   <code>classes.txt</code> is optional: one display name per line. The CNN resizes images,
   converts channels, normalizes pixels, and trains convolution, pooling, and the final linear
   layer with hand-written backprop. It is suitable for toy or narrow datasets, not ImageNet.
+</p>
+<p>
+  <strong>OCR is not part of this.</strong> The CNN returns one label for the whole image. It can
+  classify a pre-cropped character, but it cannot find or read a line of text. The
+  <a href="vision.html">Vision &amp; OCR guide</a> has a measured digit example (95.33% on 300
+  held-out images), the single-glyph recipe, and the full list of OCR requirements.
 </p>
 
 <h2>9. Explore size and compression tradeoffs</h2>

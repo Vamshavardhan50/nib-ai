@@ -60,6 +60,7 @@
         <a href="cli.html">CLI reference</a>
         <a href="http-api.html">HTTP API</a>
         <a href="rust-api.html">Rust API</a>
+        <a href="vision.html">Vision &amp; OCR</a>
         <a href="models.html">Models &amp; training</a>
         <a href="deployment.html">Deployment</a>
         <a href="faq.html">FAQ</a>
@@ -336,7 +337,11 @@ nib serve --model turbo.bin --tokenizer tokenizer.json --host 0.0.0.0 --port 808
 </div>
 <pre><code>nib web-export --output index.html</code></pre>
 
-<h2>Vision commands</h2>
+<h2 id="vision-commands">Vision commands</h2>
+<p>
+  Full guide with a measured example, data rules, OCR limits, and troubleshooting:
+  <a href="vision.html">Vision &amp; OCR</a>.
+</p>
 
 <h3><code>nib vision-train</code></h3>
 <p>The manifest is one <code>image_path label</code> pair per line. Labels are zero-based integers.</p>
@@ -359,6 +364,10 @@ data/dogs/002.jpg 1</code></pre>
 </div>
 <pre><code>nib vision-train --manifest manifest.txt --output vision.json \
   --classes 2 --image-size 32 --epochs 20</code></pre>
+<p class="muted small">
+  <code>--classes</code> must be greater than every label in the manifest. Out-of-range labels
+  are silently ignored by the loss, so a manifest mistake can look like zero loss.
+</p>
 
 <h3><code>nib vision-predict</code></h3>
 <div class="table-wrap">
@@ -372,6 +381,11 @@ data/dogs/002.jpg 1</code></pre>
 </table>
 </div>
 <pre><code>nib vision-predict --model vision.json --image data/cats/new.jpg --classes classes.txt</code></pre>
+<p class="muted small">
+  Prints only the winning class and its confidence. The Rust API returns all class
+  probabilities. Vision models are CLI/Rust only — <code>nib serve</code> accepts
+  <code>CTURBO01</code> and <code>CDENSE4</code> text models, not <code>vision.json</code>.
+</p>
 
 <h2><code>nib version</code></h2>
 <pre><code>nib version

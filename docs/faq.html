@@ -60,6 +60,7 @@
         <a href="cli.html">CLI reference</a>
         <a href="http-api.html">HTTP API</a>
         <a href="rust-api.html">Rust API</a>
+        <a href="vision.html">Vision &amp; OCR</a>
         <a href="models.html">Models &amp; training</a>
         <a href="deployment.html">Deployment</a>
         <a href="faq.html">FAQ</a>
@@ -263,6 +264,34 @@
 <p>
   Not currently. The implementation uses <code>ndarray</code> on the CPU. GPU support would
   require a new backend, kernels, and memory management; it is outside the current scope.
+</p>
+
+<h2>Vision and OCR</h2>
+
+<h3>Can Nib read text from an image?</h3>
+<p>
+  No. Nib has no OCR engine. The vision model is a single-label image classifier: one image in,
+  one class and one confidence out. It cannot detect text, segment lines, or return a string of
+  characters. It can classify a <em>pre-cropped</em> character if you train it on glyphs and do
+  the cropping yourself. For real OCR use Tesseract, PaddleOCR, EasyOCR, docTR, or a cloud vision
+  API. Full explanation and the single-glyph recipe:
+  <a href="vision.html#ocr">Vision &amp; OCR</a>.
+</p>
+
+<h3>How accurate is the vision model?</h3>
+<p>
+  On a real 10-class handwritten-digit test — 1,497 training images and 300 held-out images at
+  16×16 grayscale — it reached <strong>95.33%</strong> (286/300) after 30 epochs in 13.5 seconds.
+  That number is specific to that dataset and input size. Accuracy on your images depends on how
+  many labeled examples you provide, class balance, and how closely prediction images match the
+  training framing.
+</p>
+
+<h3>Does <code>nib serve</code> expose the vision model?</h3>
+<p>
+  No. The HTTP server loads only <code>CTURBO01</code> and <code>CDENSE4</code> text models.
+  Vision is available through <code>nib vision-train</code>, <code>nib vision-predict</code>, and
+  the Rust API. See <a href="vision.html#limits">Vision limits</a>.
 </p>
 
 <h2>API and deployment</h2>

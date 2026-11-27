@@ -302,6 +302,12 @@ curl -X POST http://127.0.0.1:8080/api/generate \\
     <p>Use Nib as a crate: models, trainers, quantization, generation, and vision.</p>
     <div class="card-arrow">Integrate the crate →</div>
   </a>
+  <a class="card" href="vision.html">
+    <span class="badge plain">Images</span>
+    <h3>Vision &amp; OCR</h3>
+    <p>Train the CNN on your own images, recognize single glyphs, and see exactly what OCR would require.</p>
+    <div class="card-arrow">Classify images →</div>
+  </a>
   <a class="card" href="models.html">
     <span class="badge plain">Deep dive</span>
     <h3>Models &amp; training</h3>
@@ -711,7 +717,7 @@ docker run --rm -p 8080:8080 --memory=1g nib-dense</code></pre>
   platform-specific settings.
 </p>
 
-<h2>8. Classify images with the CNN</h2>
+<h2 id="classify-images">8. Classify images with the CNN</h2>
 <p><strong>The problem:</strong> you want a from-scratch convolutional classifier for a small, controlled image set — shapes, colors, symbols, simple objects.</p>
 <pre><code># manifest.txt: one "path label" pair per line
 # data/red/01.png 0
@@ -726,6 +732,12 @@ nib vision-predict --model vision.json --image data/red/02.png \\
   <code>classes.txt</code> is optional: one display name per line. The CNN resizes images,
   converts channels, normalizes pixels, and trains convolution, pooling, and the final linear
   layer with hand-written backprop. It is suitable for toy or narrow datasets, not ImageNet.
+</p>
+<p>
+  <strong>OCR is not part of this.</strong> The CNN returns one label for the whole image. It can
+  classify a pre-cropped character, but it cannot find or read a line of text. The
+  <a href="vision.html">Vision &amp; OCR guide</a> has a measured digit example (95.33% on 300
+  held-out images), the single-glyph recipe, and the full list of OCR requirements.
 </p>
 
 <h2>9. Explore size and compression tradeoffs</h2>
@@ -1084,7 +1096,11 @@ nib serve --model turbo.bin --tokenizer tokenizer.json --host 0.0.0.0 --port 808
 </div>
 <pre><code>nib web-export --output index.html</code></pre>
 
-<h2>Vision commands</h2>
+<h2 id="vision-commands">Vision commands</h2>
+<p>
+  Full guide with a measured example, data rules, OCR limits, and troubleshooting:
+  <a href="vision.html">Vision &amp; OCR</a>.
+</p>
 
 <h3><code>nib vision-train</code></h3>
 <p>The manifest is one <code>image_path label</code> pair per line. Labels are zero-based integers.</p>
@@ -1107,6 +1123,10 @@ data/dogs/002.jpg 1</code></pre>
 </div>
 <pre><code>nib vision-train --manifest manifest.txt --output vision.json \\
   --classes 2 --image-size 32 --epochs 20</code></pre>
+<p class="muted small">
+  <code>--classes</code> must be greater than every label in the manifest. Out-of-range labels
+  are silently ignored by the loss, so a manifest mistake can look like zero loss.
+</p>
 
 <h3><code>nib vision-predict</code></h3>
 <div class="table-wrap">
@@ -1120,6 +1140,11 @@ data/dogs/002.jpg 1</code></pre>
 </table>
 </div>
 <pre><code>nib vision-predict --model vision.json --image data/cats/new.jpg --classes classes.txt</code></pre>
+<p class="muted small">
+  Prints only the winning class and its confidence. The Rust API returns all class
+  probabilities. Vision models are CLI/Rust only — <code>nib serve</code> accepts
+  <code>CTURBO01</code> and <code>CDENSE4</code> text models, not <code>vision.json</code>.
+</p>
 
 <h2><code>nib version</code></h2>
 <pre><code>nib version
@@ -1862,6 +1887,427 @@ cargo test --doc</code></pre>
   forward/backward passes, HTTP request parsing, CORS/UI wiring, and an in-process generate
   roundtrip.
 </p>
+`,
+  },
+  {
+    slug: "vision",
+    title: "Vision & OCR",
+    description:
+      "nib-rs vision guide: train a from-scratch CNN on labeled images, classify photos, recognize single cropped characters, and understand why full OCR is not built in.",
+    body: `
+<section class="hero">
+  <p class="eyebrow">Vision</p>
+  <h1>Image classification — and the honest OCR story</h1>
+  <p class="lead">
+    Nib includes a from-scratch convolutional network that classifies a whole image into one
+    label. It can recognize a single, cleanly cropped character. It is <strong>not</strong> an
+    OCR engine: it cannot find text in a photo or read a line of characters.
+  </p>
+  <div class="stats">
+    <div class="stat"><b>95.33%</b><span>held-out handwritten digits</span></div>
+    <div class="stat"><b>13.5 s</b><span>to train 30 epochs on 1,497 images</span></div>
+    <div class="stat"><b>49,200</b><span>bytes for the 10-class model</span></div>
+    <div class="stat"><b>1,898</b><span>weights at 16×16, 10 classes</span></div>
+  </div>
+</section>
+
+<div class="callout warn">
+  <strong>OCR is not built in</strong>
+  <p>
+    There is no text detection, no line segmentation, and no sequence decoder. The CNN returns
+    exactly one label and one confidence for the entire image. A photo of a page, a receipt, or
+    a sentence is <em>one</em> input, not a string of characters. The closest supported workflow
+    is a single-glyph classifier: you crop each character yourself, then classify the crops one
+    by one. That is documented below, with its limits.
+  </p>
+</div>
+
+<h2 id="what-it-is">What the vision model is</h2>
+<p>
+  <code>VisionCNN</code> is a small convolutional classifier written from scratch in
+  <code>src/vision.rs</code>. It starts from random weights, learns from labeled images, and
+  stores its weights as JSON. There is no pre-trained backbone, no ONNX, and no Python.
+</p>
+<pre><code>image (C × H × W, pixels normalized to 0..1)
+  → Conv2d(C → 8, 3×3) → ReLU → MaxPool(2×2)
+  → Conv2d(8 → 16, 3×3) → ReLU → MaxPool(2×2)
+  → flatten → Linear(features → classes) → softmax</code></pre>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Property</th><th>Value</th></tr></thead>
+  <tbody>
+    <tr><td>Task</td><td>Single-label image classification (one label per image)</td></tr>
+    <tr><td>Input</td><td>Square image, <code>16×16</code> grayscale by default; configurable size and RGB</td></tr>
+    <tr><td>Layers</td><td>2 convolution layers (8 and 16 filters), 2 max-pool layers, 1 linear layer</td></tr>
+    <tr><td>Activation</td><td>ReLU in convolutions, softmax at the output</td></tr>
+    <tr><td>Loss</td><td>Cross-entropy</td></tr>
+    <tr><td>Optimizer</td><td>Plain SGD with a fixed learning rate</td></tr>
+    <tr><td>Weights</td><td>1,898 for 10 classes at 16×16; grows with image size and class count</td></tr>
+    <tr><td>Model file</td><td><code>vision.json</code>, 49,200 bytes for the 10-class example</td></tr>
+    <tr><td>Training speed</td><td>13.5 s for 30 epochs on 1,497 images at 16×16 (CPU, single thread)</td></tr>
+    <tr><td>Interfaces</td><td>CLI (<code>vision-train</code>, <code>vision-predict</code>) and the Rust API</td></tr>
+    <tr><td>Not included</td><td>HTTP endpoint, webcam capture, object detection, OCR, GPU training</td></tr>
+  </tbody>
+</table>
+</div>
+<p class="muted small">
+  The model is deliberately tiny. It is suitable for narrow, controlled datasets — digits,
+  symbols, shapes, colors, simple defects, cropped objects — not ImageNet-scale recognition.
+</p>
+
+<h2 id="what-you-can-do">What you can do with it</h2>
+
+<h3>1. Binary image classification</h3>
+<p>
+  Sort images into two classes: cat vs dog, pass vs fail, defective vs clean, day vs night,
+  red vs blue. Use <code>--classes 2</code> and labels <code>0</code> and <code>1</code>.
+  This is the easiest case and needs the least data.
+</p>
+
+<h3>2. Small multi-class classification</h3>
+<p>
+  Recognize digits 0–9, shapes, symbols, traffic-sign crops, product categories, or meter
+  readings. Use one label per class and <code>--classes N</code>. A few hundred images per
+  class is a reasonable starting point.
+</p>
+
+<h3>3. Single-character recognition (the OCR-adjacent case)</h3>
+<p>
+  Train a 62-class model for <code>0-9</code>, <code>A-Z</code>, <code>a-z</code> on
+  <strong>pre-cropped, fixed-font glyphs</strong>. Then crop characters from your image with an
+  external tool and classify each crop. This works for clean, uniform text such as meter digits,
+  CAPTCHA-style glyphs, or a single known font. It is not general OCR. See
+  <a href="#ocr">the OCR section</a> for the exact recipe and caveats.
+</p>
+
+<h3>4. Simple visual inspection</h3>
+<p>
+  Scratch vs no scratch, filled vs empty, aligned vs misaligned. Keep the camera distance,
+  lighting, and framing consistent across training and prediction images; the model has no
+  invariance tricks beyond pooling.
+</p>
+
+<h3>5. Learn how a CNN trains</h3>
+<p>
+  Every forward pass, convolution, pooling window, gradient, and weight update is readable in
+  <code>src/vision.rs</code>. The model is small enough to train in seconds and inspect by hand.
+</p>
+
+<h2 id="quickstart">Quick start: train a digit classifier</h2>
+<p>
+  The numbers in this section are <strong>measured, not illustrative</strong>. The dataset is the
+  UCI handwritten digits set (the copy shipped with scikit-learn): 1,797 images at 8×8, upscaled
+  to 16×16, split into 1,497 training and 300 held-out images. Any folder of labeled images works
+  the same way.
+</p>
+
+<div class="steps">
+  <div class="step">
+    <div>
+      <h4>1. Organize the images</h4>
+      <pre><code>digits/
+  train/
+    digit_0001_1.png
+    digit_0002_0.png
+    ...
+  test/
+    digit_0000_0.png
+    ...</code></pre>
+      <p>
+        Nib does not require this folder structure. It only reads the manifest, so images can
+        live anywhere. The split is yours to make: the trainer does not create one.
+      </p>
+    </div>
+  </div>
+  <div class="step">
+    <div>
+      <h4>2. Write the manifest and class names</h4>
+      <pre><code># manifest.txt — one "path label" pair per line
+digits/train/digit_0001_1.png 1
+digits/train/digit_0002_0.png 0
+digits/test/digit_0000_0.png 0</code></pre>
+      <pre><code># classes.txt — one display name per line, in label order
+0
+1
+2
+3
+4
+5
+6
+7
+8
+9</code></pre>
+      <p>
+        Blank lines and lines starting with <code>#</code> are ignored. The label is always the
+        <strong>last</strong> token, so paths containing spaces are fine.
+      </p>
+    </div>
+  </div>
+  <div class="step">
+    <div>
+      <h4>3. Train</h4>
+      <pre><code>nib vision-train --manifest manifest.txt --output vision.json \\
+  --image-size 16 --channels 1 --classes 10 \\
+  --epochs 30 --batch-size 16 --lr 0.01</code></pre>
+      <p>Real output from this exact run:</p>
+      <pre><code>vision training: 1497 images, 10 classes, 1x16x16, epochs=30, lr=0.01, batch=16
+epoch 0/30 loss: 2.1589
+epoch 1/30 loss: 1.6572
+epoch 2/30 loss: 1.2281
+...
+epoch 28/30 loss: 0.1301
+epoch 29/30 loss: 0.1267
+vision model saved to vision.json</code></pre>
+      <p>
+        The whole run took <strong>13.5 seconds</strong>. The model file is
+        <strong>49,200 bytes</strong>.
+      </p>
+    </div>
+  </div>
+  <div class="step">
+    <div>
+      <h4>4. Predict one image</h4>
+      <pre><code>nib vision-predict --model vision.json \\
+  --image digits/test/digit_0000_0.png --classes classes.txt</code></pre>
+      <pre><code>prediction: 0 (class 0)
+confidence: 0.9998</code></pre>
+      <p>
+        The CLI prints only the top-1 label. The Rust API returns the full probability vector if
+        you need per-class scores.
+      </p>
+    </div>
+  </div>
+  <div class="step">
+    <div>
+      <h4>5. Measure held-out accuracy</h4>
+      <p>
+        Run <code>vision-predict</code> over images the model never trained on and compare with
+        the manifest labels. On the 300 held-out digits, this model scored
+        <strong>286/300 = 95.33%</strong>. Each CLI invocation, including process start and model
+        load, averaged <strong>63.7 ms</strong>.
+      </p>
+    </div>
+  </div>
+</div>
+
+<div class="callout">
+  <strong>Why 16×16?</strong>
+  <p>
+    Small inputs train fast and keep the model tiny. They also throw away detail. Use 32×32 or
+    48×48 when the distinguishing feature is fine — font shape, small defects, thin strokes.
+    The default 16×16 is fine for bold digits and simple shapes.
+  </p>
+</div>
+
+<h2 id="manifest">Manifest and data rules</h2>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Rule</th><th>Detail</th></tr></thead>
+  <tbody>
+    <tr><td>Format</td><td><code>image_path label</code>, one pair per line; label is a zero-based integer</td></tr>
+    <tr><td>Comments</td><td>Blank lines and lines starting with <code>#</code> are skipped</td></tr>
+    <tr><td>Spaces in paths</td><td>Supported, because the label is parsed from the end of the line</td></tr>
+    <tr><td>Label range</td><td>Must be <code>0 .. classes-1</code>. Out-of-range labels are silently ignored by the loss, which can look like zero loss — validate your manifest.</td></tr>
+    <tr><td>Image formats</td><td>Anything the Rust <code>image</code> crate decodes: PNG, JPEG, BMP, GIF, TIFF, WebP, and more</td></tr>
+    <tr><td>Resizing</td><td>Every image is resized to <code>image-size × image-size</code> with a triangle filter</td></tr>
+    <tr><td>Channels</td><td><code>--channels 1</code> converts to grayscale; <code>--channels 3</code> keeps RGB</td></tr>
+    <tr><td>Normalization</td><td>Pixels are divided by 255; grayscale uses 0.299R + 0.587G + 0.114B</td></tr>
+    <tr><td>Class names</td><td>Optional <code>classes.txt</code>, one name per line; line N names class N</td></tr>
+    <tr><td>Split</td><td>Not automatic. Hold out a test manifest yourself.</td></tr>
+    <tr><td>Augmentation</td><td>None. Rotation, blur, brightness, and crop jitter are not applied.</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h2 id="flags">Choosing the flags</h2>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Flag</th><th>Default</th><th>Guidance</th></tr></thead>
+  <tbody>
+    <tr><td><code>--image-size</code></td><td><code>16</code></td><td>Minimum 10. Use 16 for bold shapes, 32 for fonts and objects, 48 for fine detail. Cost grows roughly with the square of the size.</td></tr>
+    <tr><td><code>--channels</code></td><td><code>1</code></td><td>Use 3 when color is the signal (ripe/unripe, red/blue, stained/clean). Use 1 for shape and text.</td></tr>
+    <tr><td><code>--classes</code></td><td><code>10</code></td><td>Must be greater than every label in the manifest.</td></tr>
+    <tr><td><code>--lr</code></td><td><code>0.01</code></td><td>Lower to 0.003 if the loss oscillates; raise to 0.03 if it barely moves.</td></tr>
+    <tr><td><code>--epochs</code></td><td><code>10</code></td><td>Watch the loss. 20–40 is common for small datasets; stop when it flattens.</td></tr>
+    <tr><td><code>--batch-size</code></td><td><code>16</code></td><td>Reduce if memory is tight; raise for smoother gradients.</td></tr>
+  </tbody>
+</table>
+</div>
+<p>
+  Weight count at 16×16 is <code>80 + 1,168 + (64 × classes + classes)</code>. For 10 classes
+  that is <strong>1,898</strong> weights. At 32×32 the feature map is 576, so 10 classes need
+  <strong>7,018</strong> weights. The model stays tiny either way; the cost is training time and
+  image loading, not file size.
+</p>
+
+<h2 id="ocr">OCR: what is missing and what you can build</h2>
+<p>
+  Full OCR is a pipeline, and Nib currently implements only one small piece of it. This is the
+  honest breakdown.
+</p>
+<div class="grid two">
+  <div class="card">
+    <h3>What Nib gives you</h3>
+    <ul>
+      <li>A classifier: one image in, one label out.</li>
+      <li>Convolution and pooling learned from your data.</li>
+      <li>Top-1 confidence for a single glyph.</li>
+      <li>A 49 KB model that trains in seconds.</li>
+      <li>CLI and Rust interfaces.</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h3>What real OCR needs</h3>
+    <ul>
+      <li><strong>Detection</strong>: find text regions in a page or photo.</li>
+      <li><strong>Segmentation</strong>: split lines, words, and touching glyphs.</li>
+      <li><strong>Sequence recognition</strong>: map a whole line to a character sequence (CNN + RNN + CTC, or an encoder-decoder).</li>
+      <li><strong>Decoding</strong>: turn per-frame probabilities into text.</li>
+      <li><strong>Language context</strong>: fix ambiguous characters using words.</li>
+    </ul>
+  </div>
+</div>
+<p>
+  Nib has none of the detection, segmentation, sequence, or decoding stages. A model trained on
+  single glyphs cannot read a line by itself, because it has no way to know where one character
+  ends and the next begins.
+</p>
+
+<h3 id="single-glyph">Recipe: single-glyph recognition</h3>
+<p>
+  This is the only OCR-adjacent workflow that the current code supports. It works when the text
+  is clean, fixed-font, and already split into one image per character.
+</p>
+<ol>
+  <li>
+    <strong>Crop each character externally.</strong> Use OpenCV, PIL, ImageMagick, or your
+    capture pipeline. Produce one image per glyph, tightly framed, with a consistent size and
+    background. Nib does not crop or segment.
+  </li>
+  <li>
+    <strong>Define the class list.</strong> For example <code>0-9</code>, <code>A-Z</code>,
+    <code>a-z</code> = 62 classes. Write <code>classes.txt</code> in exactly that order and use
+    the same order for manifest labels.
+  </li>
+  <li>
+    <strong>Collect hundreds of examples per class per font.</strong> Include the variations you
+    expect at prediction time: weight, slight blur, ink color, background. More data matters more
+    than a bigger network here.
+  </li>
+  <li>
+    <strong>Train at 32×32 or 48×48, grayscale.</strong> The 16×16 default is usually too coarse
+    for 62 classes.
+    <pre><code>nib vision-train --manifest glyphs.txt --output glyphs.json \\
+  --image-size 32 --channels 1 --classes 62 --epochs 40 --lr 0.01</code></pre>
+  </li>
+  <li>
+    <strong>Classify each crop and join the results.</strong> Run <code>vision-predict</code> per
+    crop, or call <code>VisionCNN::predict</code> in Rust. Preserve reading order in your own
+    code. For spaces, use a blank-column or gap heuristic in the segmentation step.
+  </li>
+</ol>
+<div class="callout warn">
+  <strong>Where this breaks</strong>
+  <p>
+    Handwriting, multiple fonts, rotated or skewed text, touching characters, low contrast,
+    variable spacing, and full pages. The classifier has no context: an isolated <code>l</code>,
+    <code>1</code>, and <code>I</code> are three unrelated labels, and nothing in the model uses
+    the surrounding characters to disambiguate them. Do not present this as general OCR.
+  </p>
+</div>
+<p>
+  For production OCR, use a dedicated engine: <strong>Tesseract</strong>,
+  <strong>PaddleOCR</strong>, <strong>EasyOCR</strong>, <strong>docTR</strong>, or a cloud vision
+  API. They include detection, segmentation, sequence models, and language correction that Nib
+  does not have.
+</p>
+<p>
+  Adding real OCR to Nib would mean a new model, not a new flag: a detection stage, a
+  line-level sequence head (CTC or attention), wider inputs such as 32×128, more capacity, and a
+  line-level dataset. That is a separate project from the current image classifier.
+</p>
+
+<h2 id="rust">Use it from Rust</h2>
+<pre><code>use nib_rs::{load_image, load_manifest, VisionCNN, VisionTrainer};
+
+fn main() -&gt; anyhow::Result&lt;()&gt; {
+    let entries = load_manifest("manifest.txt")?;
+    let images: Vec&lt;_&gt; = entries
+        .iter()
+        .map(|(path, _)| load_image(path, 32, 32, 1))
+        .collect::&lt;Result&lt;_, _&gt;&gt;()?;
+    let labels: Vec&lt;usize&gt; = entries.iter().map(|(_, label)| *label).collect();
+
+    let mut trainer = VisionTrainer::new(VisionCNN::new(1, 32, 32, 10), 0.01);
+    for epoch in 0..20 {
+        println!("epoch {epoch}: loss {:.4}", trainer.train_step(&amp;images, &amp;labels));
+    }
+    trainer.save("vision.json")?;
+
+    // Predict: predict() needs &amp;mut self because forward caches activations.
+    let mut model = VisionCNN::load("vision.json")?;
+    let image = load_image("glyph.png", model.input_h, model.input_w, model.input_channels)?;
+    let probs = model.predict(&amp;image);
+    let (index, confidence) = probs
+        .iter()
+        .enumerate()
+        .max_by(|a, b| a.1.partial_cmp(b.1).unwrap())
+        .unwrap();
+    println!("class {index} at {confidence:.4}");
+    Ok(())
+}</code></pre>
+<p>
+  <code>VisionCNN</code> exposes <code>forward</code>, <code>backward</code>,
+  <code>predict</code>, <code>save</code>, and <code>load</code>.
+  <code>VisionTrainer::train_step</code> takes a slice of single-image tensors and labels and
+  returns the batch loss.
+</p>
+
+<h2 id="limits">Limits</h2>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Limitation</th><th>Consequence</th></tr></thead>
+  <tbody>
+    <tr><td>One label per image</td><td>Cannot read a line, a word, or a page. No sequence output.</td></tr>
+    <tr><td>No detection or segmentation</td><td>You must crop the object or glyph yourself.</td></tr>
+    <tr><td>No OCR</td><td>No text-in-the-wild support. Use Tesseract or PaddleOCR for that.</td></tr>
+    <tr><td>No HTTP endpoint</td><td><code>nib serve</code> only serves text models. Vision is CLI or Rust.</td></tr>
+    <tr><td>No GPU</td><td>CPU only, single thread.</td></tr>
+    <tr><td>No augmentation</td><td>Invariance must come from your dataset.</td></tr>
+    <tr><td>Small input</td><td>16×16 by default; fine detail is lost. Use 32 or 48 for text.</td></tr>
+    <tr><td>No pre-trained weights</td><td>Every model starts random and needs labeled data.</td></tr>
+    <tr><td>JSON weights</td><td>Easy to inspect, but larger than a binary format.</td></tr>
+    <tr><td>Top-1 CLI output</td><td>Only the winning class is printed; use Rust for all probabilities.</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h2 id="troubleshooting">Troubleshooting</h2>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Symptom</th><th>Cause and fix</th></tr></thead>
+  <tbody>
+    <tr><td><code>manifest ... has no entries</code></td><td>The file is empty or every line is blank/comment. Add <code>path label</code> pairs.</td></tr>
+    <tr><td><code>manifest line N is malformed</code></td><td>A line has no label. The label must be the final token.</td></tr>
+    <tr><td><code>invalid label</code></td><td>Labels must be non-negative integers. Remove quotes and decimals.</td></tr>
+    <tr><td>Loss stays at ~2.303 for 10 classes</td><td>That is <code>ln(10)</code>, i.e. random guessing. Check labels, raise the learning rate, or check that the images actually differ.</td></tr>
+    <tr><td>Loss is suspiciously 0</td><td>A label is outside <code>0..classes-1</code> and is being skipped. Fix the manifest or raise <code>--classes</code>.</td></tr>
+    <tr><td>Training accuracy is high, new images fail</td><td>Overfitting or a domain shift. Add more varied images, keep lighting/framing consistent, or hold out a real test set.</td></tr>
+    <tr><td>All predictions are one class</td><td>Classes are imbalanced or the images are too small to distinguish. Balance the data and try 32×32 RGB.</td></tr>
+    <tr><td>Wrong class names</td><td><code>classes.txt</code> must list names in label order, line 0 = class 0.</td></tr>
+    <tr><td>Image size below 10</td><td>The convolution/pooling stack collapses to zero features. Use at least 10; 16 or larger is recommended.</td></tr>
+    <tr><td><code>nib serve</code> rejects <code>vision.json</code></td><td>Expected. The HTTP server loads only <code>CTURBO01</code> and <code>CDENSE4</code> text models.</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h2>Next steps</h2>
+<div class="grid two">
+  <a class="card" href="cli.html#vision-commands"><h3>CLI reference</h3><p>Every vision flag and default in one table.</p><div class="card-arrow">Open the reference →</div></a>
+  <a class="card" href="use-cases.html#classify-images"><h3>Use cases</h3><p>Where image classification fits among the other Nib capabilities.</p><div class="card-arrow">See all use cases →</div></a>
+  <a class="card" href="rust-api.html"><h3>Rust API</h3><p>Embed the CNN and trainer directly in your application.</p><div class="card-arrow">Read the API guide →</div></a>
+  <a class="card" href="models.html"><h3>Models &amp; training</h3><p>How the text models compare, and how training works end to end.</p><div class="card-arrow">Read the deep dive →</div></a>
+</div>
 `,
   },
   {
@@ -2644,6 +3090,34 @@ jobs:
 <p>
   Not currently. The implementation uses <code>ndarray</code> on the CPU. GPU support would
   require a new backend, kernels, and memory management; it is outside the current scope.
+</p>
+
+<h2>Vision and OCR</h2>
+
+<h3>Can Nib read text from an image?</h3>
+<p>
+  No. Nib has no OCR engine. The vision model is a single-label image classifier: one image in,
+  one class and one confidence out. It cannot detect text, segment lines, or return a string of
+  characters. It can classify a <em>pre-cropped</em> character if you train it on glyphs and do
+  the cropping yourself. For real OCR use Tesseract, PaddleOCR, EasyOCR, docTR, or a cloud vision
+  API. Full explanation and the single-glyph recipe:
+  <a href="vision.html#ocr">Vision &amp; OCR</a>.
+</p>
+
+<h3>How accurate is the vision model?</h3>
+<p>
+  On a real 10-class handwritten-digit test — 1,497 training images and 300 held-out images at
+  16×16 grayscale — it reached <strong>95.33%</strong> (286/300) after 30 epochs in 13.5 seconds.
+  That number is specific to that dataset and input size. Accuracy on your images depends on how
+  many labeled examples you provide, class balance, and how closely prediction images match the
+  training framing.
+</p>
+
+<h3>Does <code>nib serve</code> expose the vision model?</h3>
+<p>
+  No. The HTTP server loads only <code>CTURBO01</code> and <code>CDENSE4</code> text models.
+  Vision is available through <code>nib vision-train</code>, <code>nib vision-predict</code>, and
+  the Rust API. See <a href="vision.html#limits">Vision limits</a>.
 </p>
 
 <h2>API and deployment</h2>
